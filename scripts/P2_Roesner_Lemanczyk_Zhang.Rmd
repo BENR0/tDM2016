@@ -50,7 +50,15 @@ figNum = local({
 eval_block = TRUE
 #flag if reading and plotting should be cached
 cache_erg = FALSE
+```
 
+```{r problem specific functions, echo = FALSE, include = FALSE}
+dataSizeZeros <- function(dataCol){
+  len <- length(dataCol)
+  lenZ <- length(which(dataCol == 0))
+  res <- list(NumDataPoints = len, NumMissing = lenZ)
+  return(res)
+}
 ```
 
 ```{r load_packages,echo=FALSE, error=FALSE, message=FALSE, include=FALSE}
@@ -58,15 +66,15 @@ cache_erg = FALSE
 packages <- c("tidyr","dplyr","lubridate","zoo","stringr","timeSeries", "tseries", "car", "AdaptGauss", "forecast", "kfigr")
 lapply(packages,library,character.only=TRUE)
 #set prefix for figure numbering
-opts_knit$set(kfigr.prefix = TRUE)
+#opts_knit$set(kfigr.prefix = TRUE)
 
 ```
 
 
 ```{r load_data, echo=FALSE}
-dataNO3 <- read.table("projekt_2/Chirimachay_NO3.lrn", skip = 4, header = TRUE, fill = TRUE)
-dataRad <- read.table("projekt_2/Chirimachay_Netradiation.lrn", skip = 4, header = TRUE, fill = TRUE)
-dataPrecip <- read.table("projekt_2/Chirimachay_Precip.lrn", skip = 4, header = TRUE, fill = TRUE)
+dataNO3 <- read.table("../data/p2_Chirimachay_NO3.lrn", skip = 4, header = TRUE, fill = TRUE)
+dataRad <- read.table("../data/p2_Chirimachay_Netradiation.lrn", skip = 4, header = TRUE, fill = TRUE)
+dataPrecip <- read.table("../data/p2_Chirimachay_Precip.lrn", skip = 4, header = TRUE, fill = TRUE)
 
 dataNO3$HH <- str_pad(dataNO3$HH, 2, c("left"), "0")
 dataNO3$Min <- str_pad(dataNO3$Min, 2, c("left"), "0")
@@ -84,7 +92,7 @@ dataRad$Min <- str_pad(dataRad$Min, 2, c("left"), "0")
 dataRad <- unite_(dataRad, "time", c("HH", "Min"), sep = ":")
 dataRad <- unite_(dataRad, "date", c("YYYY", "MM", "DD"), sep = "-")
 dataRad <- unite_(dataRad, "datetime", c("date", "time" ), sep = " ")
-dataRad <- select(dataRad, datetime, NNO3mgl)
+dataRad <- select(dataRad, datetime, CorrectedNetRadiationWm2)
 dataRad$datetime <- parse_date_time(dataRad$datetime, order = "Ymd HM")
 
 
@@ -94,28 +102,41 @@ dataPrecip$Min <- str_pad(dataPrecip$Min, 2, c("left"), "0")
 dataPrecip <- unite_(dataPrecip, "time", c("HH", "Min"), sep = ":")
 dataPrecip <- unite_(dataPrecip, "date", c("YYYY", "MM", "DD"), sep = "-")
 dataPrecip <- unite_(dataPrecip, "datetime", c("date", "time" ), sep = " ")
-dataPrecip <- select(dataPrecip, datetime, NNO3mgl)
+dataPrecip <- select(dataPrecip, datetime, PrecipitationMM)
 dataPrecip$datetime <- parse_date_time(dataPrecip$datetime, order = "Ymd HM")
 
 ```
-#### Überblick über die Variable
-Zur Verschaffung eines ersten Eindrucks ist die Variable NO3 als einfacher xyplot geplottet.
-Hierbei ist neben der Variabilität vor allem aufällig das der Datensatz Unterbrechungen hat
-welche mit Null aufgefüllt wurden.
-Darüber fällt auf das Betrachtung des Histograms wie auch des QQplots nicht von einer
-Normalverteilung der Variablen ausgegangen werden kann.
+#### Überblick über die Variablen
 
-```{r inspect_data_1, echo=FALSE, fig.cap = "Inspect data", anchor = "figure"}
-#get visual impression of data
-plot(data$NNO3mgl,pch = "l")
+
+```{r inspect_data_length, echo=FALSE}
+#size of data sets and how many missing values
+missNO3 <- dataSizeZeros(dataNO3$NNO3mgl)
+missPrecip <- dataSizeZeros(dataPrecip$PrecipitationMM)
+missRad <- dataSizeZeros(dataRad$CorrectedNetRadiationWm2)
+
+#range of data points
+summary(dataNO3)
+summary(dataPrecip)
+summary(dataRad)
 ```
 
-test link to `figr("inspect_data_1")`
+```{r inspect_data_plot, echo=FALSE, fig.cap = "Inspect data", anchor = "figure"}
+#get visual impression of data
+plot(dataNO3$NNO3mgl, pch = "l")
+plot(dataPrecip$PrecipitationMM,pch = "l")
+plot(dataRad$CorrectedNetRadiationWm2,pch = "l")
+```
 
-```{r inspect_data_1.1, echo=FALSE}
-hist(data$NNO3mgl)
+
+```{r inspect_data_hist echo=FALSE}
+hist(dataNO3$NNO3mgl)
+hist(dataPrecip$PrecipitationMM)
+hist(dataRad$CorrectedNetRadiationWm2)
 #check if data ist normal distributed
 qqPlot(data$NNO3mgl)
+qqPlot(dataPrecip$PrecipitationMM)
+qqPlot(dataRad$CorrectedNetRadiationWm2)
 ```
 
 
