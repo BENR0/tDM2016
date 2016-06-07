@@ -1,0 +1,142 @@
+---
+title: "Temporal Datamining WS 1"
+author: "Benjamin Roesner, Marta Lemanczyk, Jiachun Zhang"
+output:
+  html_document:
+    fig_caption: yes
+    fig_height: 5
+    fig_width: 7
+    highlight: pygments
+    number_sections: yes
+    theme: united
+    toc: yes
+    toc_depth: 2
+  pdf_document:
+    toc: yes
+bibliography: lit.bib
+---
+------
+
+```{r chunk options and functions, echo=FALSE, eval = TRUE}
+#eval: evaluate code chunk true/false
+#include: include chunk in ouput document true/false (code still evaluated and plots generated)
+#echo: include source code true/
+#error: true/false display error messages
+#message: true/ false display messages
+#warning: true/false display warning messages
+#eval: true/false evaluate block -> use with variable eval_block
+#cache: cache results -> use with variable cache_erg
+#fig.cap = figNum("FIG CAPTION"): figure captions, with numbering by figNum function (see below)
+#anchor = "figure": use with package kfigr to get inline reference to images with number by using function figr("NAME OF CHUNK WITH FIGURE")
+
+#child = "file.Rmd": include file
+
+#links
+#[SECTION NAME][LINK NAME]
+
+#citation from lit.bib
+#[@LITSHORTNAME]
+
+#figure number counter function
+figNum = local({
+  i = 0
+  function(x) {
+    i <<- i + 1
+    paste('Figure ', i, ': ', x, sep = '')
+  }
+})
+
+#flag to easily change evaluation of code blocks in results section
+eval_block = TRUE
+#flag if reading and plotting should be cached
+cache_erg = FALSE
+
+```
+
+```{r load_packages,echo=FALSE, error=FALSE, message=FALSE, include=FALSE}
+#load packages
+packages <- c("tidyr","dplyr","lubridate","zoo","stringr","timeSeries", "tseries", "car", "AdaptGauss", "forecast", "kfigr")
+lapply(packages,library,character.only=TRUE)
+#set prefix for figure numbering
+opts_knit$set(kfigr.prefix = TRUE)
+
+```
+
+
+```{r load_data, echo=FALSE}
+dataNO3 <- read.table("projekt_2/Chirimachay_NO3.lrn", skip = 4, header = TRUE, fill = TRUE)
+dataRad <- read.table("projekt_2/Chirimachay_Netradiation.lrn", skip = 4, header = TRUE, fill = TRUE)
+dataPrecip <- read.table("projekt_2/Chirimachay_Precip.lrn", skip = 4, header = TRUE, fill = TRUE)
+
+dataNO3$HH <- str_pad(dataNO3$HH, 2, c("left"), "0")
+dataNO3$Min <- str_pad(dataNO3$Min, 2, c("left"), "0")
+
+dataNO3 <- unite_(dataNO3, "time", c("HH", "Min"), sep = ":")
+dataNO3 <- unite_(dataNO3, "date", c("YYYY", "MM", "DD"), sep = "-")
+dataNO3 <- unite_(dataNO3, "datetime", c("date", "time" ), sep = " ")
+dataNO3 <- select(dataNO3, datetime, NNO3mgl)
+dataNO3$datetime <- parse_date_time(dataNO3$datetime, order = "Ymd HM")
+
+
+dataRad$HH <- str_pad(dataRad$HH, 2, c("left"), "0")
+dataRad$Min <- str_pad(dataRad$Min, 2, c("left"), "0")
+
+dataRad <- unite_(dataRad, "time", c("HH", "Min"), sep = ":")
+dataRad <- unite_(dataRad, "date", c("YYYY", "MM", "DD"), sep = "-")
+dataRad <- unite_(dataRad, "datetime", c("date", "time" ), sep = " ")
+dataRad <- select(dataRad, datetime, NNO3mgl)
+dataRad$datetime <- parse_date_time(dataRad$datetime, order = "Ymd HM")
+
+
+dataPrecip$HH <- str_pad(dataPrecip$HH, 2, c("left"), "0")
+dataPrecip$Min <- str_pad(dataPrecip$Min, 2, c("left"), "0")
+
+dataPrecip <- unite_(dataPrecip, "time", c("HH", "Min"), sep = ":")
+dataPrecip <- unite_(dataPrecip, "date", c("YYYY", "MM", "DD"), sep = "-")
+dataPrecip <- unite_(dataPrecip, "datetime", c("date", "time" ), sep = " ")
+dataPrecip <- select(dataPrecip, datetime, NNO3mgl)
+dataPrecip$datetime <- parse_date_time(dataPrecip$datetime, order = "Ymd HM")
+
+```
+#### Überblick über die Variable
+Zur Verschaffung eines ersten Eindrucks ist die Variable NO3 als einfacher xyplot geplottet.
+Hierbei ist neben der Variabilität vor allem aufällig das der Datensatz Unterbrechungen hat
+welche mit Null aufgefüllt wurden.
+Darüber fällt auf das Betrachtung des Histograms wie auch des QQplots nicht von einer
+Normalverteilung der Variablen ausgegangen werden kann.
+
+```{r inspect_data_1, echo=FALSE, fig.cap = "Inspect data", anchor = "figure"}
+#get visual impression of data
+plot(data$NNO3mgl,pch = "l")
+```
+
+test link to `figr("inspect_data_1")`
+
+```{r inspect_data_1.1, echo=FALSE}
+hist(data$NNO3mgl)
+#check if data ist normal distributed
+qqPlot(data$NNO3mgl)
+```
+
+
+```{r acf_pacf,echo=FALSE, warning=FALSE, message=FALSE, results='hide'}
+#determining model components
+Acf(tsdata, lag.max = 30)
+#acf plot cuts of after 3 lag => Ma = 3
+Pacf(tsdata, lag.max = 30)
+#pacf cuts of at lag 1 => AR = 1
+```
+
+```{r modelling,echo=FALSE, warning=FALSE, message=FALSE, results='hide'}
+fitarima <- Arima(tsdata, c(1,1,3), method = "ML", transform.pars = FALSE)
+#check redsiduals
+resid <- residuals(fitarima)
+Acf(resid)
+Box.test(resid, type = "Ljung")#
+#in the acf plot not all values ar within the threshold but box test suggests that
+#residuals can be considered white noise
+#
+plot(forecast(fitarima), col = "green")
+lines(as.ts(tsdata), add = TRUE)
+
+```
