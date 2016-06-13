@@ -209,11 +209,13 @@ zooraddiff <- diff(zooRad)
 plot(zooraddiff, xlab = "Zeit", ylab = "Differenze netto Strahlung")
 ```
 
+Da Strahlung gemessen wird ist zu erwarten das es starken dijurnale Schwankungen
+im Datensatz gibt. Darüber hinaus handelt es sich um eine Flächenhafte Messgröße
+weshalb sich aller Wahrscheinlichkeit nach eine Wurzeltransformation der Daten
+vorteilhaft erweisen könnte.
 ```{r inspect_data_plot, echo = FALSE, fig.cap = "Inspect data", anchor = "figure", eval = eval_block}
-#get visual impression of data
-plot(dataNO3$NNO3mgl, pch = "l")
-plot(dataPrecip$PrecipitationMM,pch = "l")
-plot(dataRad$CorrectedNetRadiationWm2,pch = "l")
+
+overviewPlot(sqrt(coredata(dataRad)$CorrectedNetRadiationWm2))
 ```
 
 
