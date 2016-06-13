@@ -322,28 +322,80 @@ eine gute Anpassung dar.
 NO3 ohne Nullen hat 3 Gaussian Mixture, s.o, nutze daher Transformierte Daten und 3 Bestände.
 ```{r Hidden Markow Modell, echo = FALSE, message = FALSE, include = FALSE}
 #NO3 ohne Nullen hat 3 Gaussian Mixture.
-HMM <- HMMFit(trans, nStates = 3)
+HMM=HMMFit(trans, nStates=3,control=list(verbose=1, init= 'KMEANS'),asymptCov=TRUE) # K-means initialisierung
 HMM$HMM$initProb
 HMM$HMM$transMat
 HMM$HMM$distribution
 summary(HMM)
 
-vit <- viterbi(HMM, trans)
-#HMMGraphicDiag(vit, HMM, trans)
+ZustandsNamen=c('Z1','Z2','Z3')
+PlotPixMatrix(HMM$HMM$transMat,ZustandsNamen,0,1,ZustandsNamen,main = 'geschätzte Übergangswahrschinlichkeiten')
+#PlotPixMatrix(HMMmodell$HMM$initProb,LowLim = 0,HiLim = 1,main = 'geschätzte Anfangswahrscheinlichkeiten')
+
+
+VitPath=viterbi(HMM,trans)
+HMMcls <- VitPath$states  # die vorhergesagten Klassen des HMM
+HMMGraphicDiag(vit,HMM,trans)
 ```
 
 ```{r Hidden Markow Modell plot, echo = FALSE}
-par(mfrow = c(3, 1))
-plot(vit$states, type = "l", main = "Clusterung nach Viterbi")
-plot(Cls, type = "l", main = "Clusterung nach GMM")
-plot(vit$states - Cls, type = "l", main = "Diffenz von Clusterung")
-#par(mfrow = c(1, 1))
+par(mfrow=c(3,1))
+plot(HMMcls,type="l",main="Clusterung nach Viterbi")
+plot(Cls,type="l",main="Clusterung nach GMM")
+#Cls=ReadCLS('PriceVolumeHMMstate.cls',path)$Cls
+#plot(Cls,type="l",main="Vordefinierte Clusterung")
+plot(vit$states-Cls,type="l",main="Differenz von Clusterung")
+par(mfrow=c(1,1))
 ```
 
 HMM liefert ganz anderes Ergebnis als GMM.
 
 
 #### Fast Foriour Transformation
+```{r Hidden Markow Modell, echo = FALSE, message = FALSE, include = FALSE}
+data=NO3$Data[,1]
+plot(data,type="l")
+
+#Step 1: Symmetrie und Spiegeln, wenn nötig
+periodData=c(data,rev(data),-data,-rev(data))
+plot(periodData,type="l")
+data=periodData
+
+#Step 2: FFT, Amplitude plotten
+KomplexeFourierKoeffizienten=fft(data)
+KomplexeFourierKoeffizienten[1:20]
+
+Amplitude = sqrt(Re(KomplexeFourierKoeffizienten * Conj(KomplexeFourierKoeffizienten)))
+#power=Amplitude^2
+plot(Amplitude[1:100],type="h")
+
+NyquistNumber=length(data)/2
+MeanigfulFreqInd = 1:NyquistNumber
+freq = MeanigfulFreqInd /length(data)
+plot(freq,Amplitude[MeanigfulFreqInd],type="l",xlab='Frequenz',ylab="log Amplitude")
+
+
+#Step 3: Filterung
+# Hin und Ruecktransformieren
+FilteredFreq = KomplexeFourierKoeffizienten
+gefilterd = Re(ifft(FilteredFreq))
+plot(data,type="l",col='blue',lwd=3)
+lines(gefilterd,col='green',lwd=1)
+legend("topright",c('original','fft then ifft'),col=c('blue','green'),lty = 1,lwd=c(3,1))
+
+
+#Filterung durch weglassen der HF anteile
+KeepInd = (1:40);  # nur die tieffrequenten behalten 
+KeepInd = c(1:20,80:100); # Ausgewählt Frequenz
+m=median(Amplitude[1:100]) # Signifikant Frequenz
+keepInd = which(Amplitude[1:100]> m)
+FilteredFreq = KomplexeFourierKoeffizienten*0;
+FilteredFreq[KeepInd]= KomplexeFourierKoeffizienten[KeepInd];
+gefilterd1 = Re(ifft(FilteredFreq));
+plot(data,type="l",col='blue',lwd=1)
+lines(gefilterd1,col='green',lwd=1)
+legend("topright",c('original','chosen freq'),col=c('blue','green'),lty = 1,lwd=c(3,1))
+```
 
 
 #### Aufgabe 3
