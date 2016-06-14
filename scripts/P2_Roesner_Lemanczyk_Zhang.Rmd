@@ -130,6 +130,97 @@ overviewPlot <- function(data, name = "data"){
   
   par(mfrow = c(1,1))
 }
+
+#modified adapt gauss function without active input through shiny app
+getOptGauss <- function(Data, Kernels = ParetoDensityEstimation(Data, paretoRadius = ParetoRadius(Data))$kernels, ParetoDensity = ParetoDensityEstimation(Data, paretoRadius = ParetoRadius(Data))$paretoDensity, fast = TRUE){ 
+    # Teste RMS fuer einen Gauss
+    Mean1 <- mean(Data)
+    Deviation1 <- sd(Data)
+    Weight1 <- 1
+    Var=EMGauss(Data,fast=fast)
+    Mean1 <- Var$Means
+    Deviation1 <- Var$SDs
+    Weight1 <- Var$Weights
+    Fi <- dnorm(Kernels,Mean1,Deviation1)*Weight1
+    RMS1 <- sqrt(sum((Fi-ParetoDensity)^2))
+    
+    # Teste RMS fuer 2 Gauss
+    Means2 <- c(0,0)
+    Deviations2 <- c(0,0)
+    Weights2 <- c(0,0)
+    Valskmeans <- kmeans(Data,2,iter.max=100)
+    KValues <- Valskmeans$cluster
+    #print(KValues2)
+    for (i in 1:2){
+      Means2[i] <- mean(Data[KValues==i])
+      Deviations2[i] <- sd(Data[KValues==i])
+      Weights2[i] <- sum(KValues==i)
+      if (is.na(Deviations2[i])) {Deviations2[i] <- 0}
+    }
+    Weights2 <- Weights2/length(KValues)
+    Var=EMGauss(Data,Means2,Deviations2,Weights2,10,fast=fast)
+    Means2 <- Var$Means
+    Deviations2 <- Var$SDs
+    Weights2 <- Var$Weights
+    Fi <- 0
+    for (i in 1:2){
+      Fi <- Fi+dnorm(Kernels,Means2[i],Deviations2[i])*Weights2[i]
+    }
+    RMS2 <- sqrt(sum((Fi-ParetoDensity)^2))
+    
+    # Teste RMS fuer 3 Gauss
+    Means3 <- c(0,0,0)
+    Deviations3 <- c(0,0,0)
+    Weights3 <- c(0,0,0)
+    Valskmeans <- kmeans(Data,3,iter.max=100)
+    KValues <- Valskmeans$cluster
+    #print(KValues2)
+    for (i in 1:3){
+      Means3[i] <- mean(Data[KValues==i])
+      Deviations3[i] <- sd(Data[KValues==i])
+      Weights3[i] <- sum(KValues==i)
+      if (is.na(Deviations3[i])) {Deviations3[i] <- 0}
+    }
+    Weights3 <- Weights3/length(KValues)
+    Var=EMGauss(Data,Means3,Deviations3,Weights3,10,fast=fast)
+    Means3 <- Var$Means
+    Deviations3 <- Var$SDs
+    Weights3 <- Var$Weights
+    Fi <- 0
+    for (i in 1:3){
+      Fi <- Fi+dnorm(Kernels,Means3[i],Deviations3[i])*Weights3[i]
+    }
+    RMS3 <- sqrt(sum((Fi-ParetoDensity)^2))
+    
+    # ueberpruefe ob RMS1( 1 Gauss) oder RMS2 (3 Gauss ) kleiner ist. Speichere zugehoerige means, deviations und weights
+    SSE <- c(RMS1^2*log(3), RMS2^2*log(3*2), RMS3^2*log(3*3))
+    #SSE <- c(RMS1^2*log(3), RMS2^2*log(3*2))
+    minSSEind <- which.min(SSE)
+    switch(as.character(minSSEind),
+           "1" = {means <- Mean1
+                deviations <- Deviation1
+                weights <- Weight1
+                rms <- RMS1},
+           "2" = {means <- Means2
+                deviations <- Deviations2
+                weights <- Weights2
+                rms <- RMS2},
+           "3" = {means <- Means3
+                deviations <- Deviations3
+                weights <- Weights3
+                rms <- RMS3}
+           )
+    # Ordne gaussians nach mean
+    order <- order(means)
+    means <- means[order]
+    deviations <- deviations[order]
+    weights <- weights[order]
+    rms <- rms
+    out=list(means=means,deviations=deviations,weights=weights, rms = rms)
+    
+    
+    return(out)
+  }
 ```
 
 ```{r load_packages, echo=FALSE, error=FALSE, message=FALSE, include=FALSE}
@@ -213,22 +304,75 @@ Da Strahlung gemessen wird ist zu erwarten das es starken dijurnale Schwankungen
 im Datensatz gibt. Darüber hinaus handelt es sich um eine Flächenhafte Messgröße
 weshalb sich aller Wahrscheinlichkeit nach eine Wurzeltransformation der Daten
 vorteilhaft erweisen könnte.
-```{r inspect_data_plot, echo = FALSE, fig.cap = "Inspect data", anchor = "figure", eval = eval_block}
 
-overviewPlot(sqrt(coredata(dataRad)$CorrectedNetRadiationWm2))
+```{r sqrt, echo = FALSE, fig.cap = "Inspect data", anchor = "figure", eval = eval_block}
+sqrtzooRad <- sqrt(zooRad)
+overviewPlot(coredata(sqrtzooRad))
+```
+
+Es zeigt sich das die Verteilung der Daten trotz Wurzeltransformation nicht
+Normalverteilt ist und einige Extreme Werte enthalten. Weitere Analyse zeigt
+das die 6. Wurzel der Daten zumindest die extremen Werte einfängt. Weiterhin
+zeigt sich das die Daten bimodal verteilt sind.
+
+```{r 6th root, echo = FALSE, fig.cap = "Inspect data", anchor = "figure", eval = eval_block}
+sixthroot <- zooRad^(1/6)
+overviewPlot(coredata(sixthroot))
+```
+
+```{r GMM, echo = FALSE, fig.cap = "Inspect data", anchor = "figure", eval = eval_block}
+#GMMRad <- AdaptGauss(coredata(sixthroot))
+GMMRadMeans <- c(1.34643, 2.14992)
+GMMRadSDs <- c(0.205605, 0.404244)
+GMMRadWeights <- c(0.486, 0.507)
+GMMRadParRadius <- 0.0989202
+GMMRadRMS <- 0.1106062
+GMMRadBayBound <- 1.679349
+
+PlotMixtures(coredata(sixthroot), GMMRadMeans, GMMRadSDs, GMMRadWeights)
+```
+
+Der erste Eindruck des Gauß-Mixturen Modells suggeriert das die 6. Wurzel aus dem
+Datensatz gut mittels zweier Gauß Funktionen modelliert werden kann. Der QQ-Plot
+sowie ein nachfolgend ausgeführter Chi-Quadrat Test zeigen das die Daten nicht der
+Verteilung des Modells entsprechen. Insbesondere an den Enden der Modellverteilung
+sowie in der Mitte weichen die Daten deutlich ab.
+
+```{r QQ_GMM, echo = FALSE, fig.cap = "Inspect data", anchor = "figure", eval = eval_block}
+QQplotGMM(coredata(sixthroot), GMMRadMeans, GMMRadSDs, GMMRadWeights)
+
+#sixthrootKS <- KStestMixtures(coredata(sixthroot), GMMRadMeans, GMMRadSDs, GMMRadWeights)
+sixthrootChis <- Chi2testMixtures(testdata, GMMRadMeans, GMMRadSDs, GMMRadWeights)
+```
+
+```{r FFT, echo = FALSE, fig.cap = "Inspect data", anchor = "figure", eval = eval_block}
+specsixthroot <- spectrum(sixthroot, spans = c(3,9))
+
+#get sampling frequency of data
+freq <- frequency(sixthroot)
+Nyfreq <- freq/2
+Nf <- length(coredata(sixthroot))/2
+
+
+sixthrootFFT <- fft(coredata(sixthroot))/length(coredata(sixthroot))
+plot(Mod(sixthrootFFT[2:4000]), type = "l", xlab = "Frequenz (Hz)")
+
+sixthrootFFT2 <- ifft(coredata(sixthroot))/length(coredata(sixthroot))
+plot(Mod(sixthrootFFT2[2:300]), type = "l", xlab = "Frequenz (Hz)")
 ```
 
 
-```{r inspect_data_hist, echo = FALSE, eval = eval_block}
-hist(dataNO3$NNO3mgl)
-hist(dataPrecip$PrecipitationMM)
-hist(dataRad$CorrectedNetRadiationWm2)
-#check if data ist normal distributed
-qqPlot(data$NNO3mgl)
-qqPlot(dataPrecip$PrecipitationMM)
-qqPlot(dataRad$CorrectedNetRadiationWm2)
+```{r , echo = FALSE, fig.cap = "Inspect data", anchor = "figure", eval = eval_block}
+
 ```
 
+```{r , echo = FALSE, fig.cap = "Inspect data", anchor = "figure", eval = eval_block}
 
-```{r child = "P2_child_script_Jiachun.Rmd", eval = eval_block}
+```
+
+```{r , echo = FALSE, fig.cap = "Inspect data", anchor = "figure", eval = eval_block}
+
+```
+
+```{r Jiachun NO3 data, child = "P2_child_script_Jiachun.Rmd", eval = eval_block}
 ```
