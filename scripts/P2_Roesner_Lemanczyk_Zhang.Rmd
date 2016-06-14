@@ -61,7 +61,7 @@ loadData <- function(flist, names = unlist(lapply(seq(1, length(flist)), functio
     }
 }
 
-summarizeData <- function(data){
+summarizeData <- function(data, zero.as.nan = TRUE){
   if(class(data) == "zoo"){
     #start and end points of ts
     st <- start(data)
@@ -77,7 +77,12 @@ summarizeData <- function(data){
     reg <- NULL
     }
   len <- length(data)
-  lenZeros <- length(which(data == 0 | is.nan(data) | is.null(data)))
+  if(zero.as.nan){
+    lenZeros <- length(which(data == 0 | is.nan(data) | is.null(data)))
+  } else {
+    lenZeros <- length(which(is.nan(data) | is.null(data)))
+  }
+  
   min <- min(data)
   max <- max(data)
   res <- list(Start = st, End = end, NumDataPoints = len, NumMissing = lenZeros, Min = min, Max = max, Regulär = reg, Delta = delta)
@@ -225,7 +230,8 @@ getOptGauss <- function(Data, Kernels = ParetoDensityEstimation(Data, paretoRadi
 
 ```{r load_packages, echo=FALSE, error=FALSE, message=FALSE, include=FALSE}
 #load packages
-packages <- c("tidyr", "dplyr", "DataIO", "lubridate", "zoo", "stringr", "timeSeries", "tseries", "car", "AdaptGauss", "forecast", "kfigr", "dbt.RetroMAT", "RHmm", "FinTS", "knitr")
+packages <- c("tidyr", "dplyr", "DataIO", "lubridate", "zoo", "xts", "stringr", "timeSeries", "tseries", "car",
+              "AdaptGauss", "forecast", "kfigr", "dbt.RetroMAT", "RHmm", "FinTS", "knitr", "deepmixS4")
 lapply(packages,library,character.only=TRUE)
 #set prefix for figure numbering
 #opts_knit$set(kfigr.prefix = TRUE)
@@ -244,6 +250,7 @@ files <- list.files("../data", pattern = "p2_", full.names = TRUE)
 
 loadData(files, c("dataRad", "dataNO3", "dataPrecip"))
 
+#pad hous and mins to to digits
 dataNO3$HH <- str_pad(dataNO3$HH, 2, c("left"), "0")
 dataNO3$Min <- str_pad(dataNO3$Min, 2, c("left"), "0")
 
@@ -252,8 +259,9 @@ dataNO3 <- unite_(dataNO3, "date", c("YYYY", "MM", "DD"), sep = "-")
 dataNO3 <- unite_(dataNO3, "datetime", c("date", "time" ), sep = " ")
 #dataNO3 <- select(dataNO3, datetime, NNO3mgl)
 dataNO3$datetime <- parse_date_time(dataNO3$datetime, order = "Ymd HM")
+zooNO3 <- read.zoo((data.frame(datetime = dataNO3$datetime, no3 = dataNO3$NNO3mgl)))
 
-
+#pad hous and mins to to digits
 dataRad$HH <- str_pad(dataRad$HH, 2, c("left"), "0")
 dataRad$Min <- str_pad(dataRad$Min, 2, c("left"), "0")
 
@@ -264,20 +272,42 @@ dataRad <- unite_(dataRad, "datetime", c("date", "time" ), sep = " ")
 dataRad$datetime <- parse_date_time(dataRad$datetime, order = "Ymd HM")
 zooRad <- read.zoo((data.frame(datetime = dataRad$datetime, rad = dataRad$CorrectedNetRadiationWm2)))
 
-
+#pad hous and mins to to digits
 dataPrecip$HH <- str_pad(dataPrecip$HH, 2, c("left"), "0")
 dataPrecip$Min <- str_pad(dataPrecip$Min, 2, c("left"), "0")
+
+#pad years in Precipiation data to full years
+dataPrecip$YYYY <- str_pad(dataPrecip$YYYY, 3, c("left"), "0")
+dataPrecip$YYYY <- str_pad(dataPrecip$YYYY, 4, c("left"), "2")
 
 dataPrecip <- unite_(dataPrecip, "time", c("HH", "Min"), sep = ":")
 dataPrecip <- unite_(dataPrecip, "date", c("YYYY", "MM", "DD"), sep = "-")
 dataPrecip <- unite_(dataPrecip, "datetime", c("date", "time" ), sep = " ")
 #dataPrecip <- select(dataPrecip, datetime, PrecipitationMM)
 dataPrecip$datetime <- parse_date_time(dataPrecip$datetime, order = "Ymd HM")
+zooPrecip <- read.zoo((data.frame(datetime = dataPrecip$datetime, prec = dataPrecip$PrecipitationMM)))
+
+#start all series at the same time
+zooNO3 <- window(zooNO3, start = start(zooRad))
+zooPrecip <- window(zooPrecip, start = start(zooRad))
+#aggregate twelve hourly
+aggPrecip <- aggregate(zooPrecip, time(zooPrecip) - as.numeric(time(zooPrecip)) %% (12*60*60), sum)
+#set timezone variable else time zone will be lost while merging zoo objects
+Sys.setenv(TZ="UTC")
+agg2 <- merge.zoo(zooRad, zooNO3)
+agg2 <- aggregate(agg2, time(agg2) - as.numeric(time(agg2)) %% (12*60*60), mean)
+#merge timeseries
+tsAll <- merge.zoo(agg2, aggPrecip)
+#trim leading and trailing nan values
+tsAll <- na.trim(tsAll)
 
 ```
+
 # Überblick über die Variablen
 ```{r inspect_data_length, echo = FALSE}
-summaryData <- summarizeData(zooRad)
+summaryRad <- summarizeData(zooRad)
+summaryNO3 <- summarizeData(zooNO3)
+summaryPrecip <- summarizeData(zooPrecip, zero.as.nan = FALSE)
 ```
 
 Der Datensatz besteht aus einer Zeitreihe mit `r summaryData$NumDatPoints` Werten
@@ -305,7 +335,7 @@ im Datensatz gibt. Darüber hinaus handelt es sich um eine Flächenhafte Messgr�
 weshalb sich aller Wahrscheinlichkeit nach eine Wurzeltransformation der Daten
 vorteilhaft erweisen könnte.
 
-```{r sqrt, echo = FALSE, fig.cap = "Inspect data", anchor = "figure", eval = eval_block}
+```{r sqrt, echo = FALSE, eval = eval_block}
 sqrtzooRad <- sqrt(zooRad)
 overviewPlot(coredata(sqrtzooRad))
 ```
@@ -315,12 +345,12 @@ Normalverteilt ist und einige Extreme Werte enthalten. Weitere Analyse zeigt
 das die 6. Wurzel der Daten zumindest die extremen Werte einfängt. Weiterhin
 zeigt sich das die Daten bimodal verteilt sind.
 
-```{r 6th root, echo = FALSE, fig.cap = "Inspect data", anchor = "figure", eval = eval_block}
+```{r 6th root, echo = FALSE, eval = eval_block}
 sixthroot <- zooRad^(1/6)
 overviewPlot(coredata(sixthroot))
 ```
 
-```{r GMM, echo = FALSE, fig.cap = "Inspect data", anchor = "figure", eval = eval_block}
+```{r GMM, echo = FALSE, eval = eval_block}
 #GMMRad <- AdaptGauss(coredata(sixthroot))
 GMMRadMeans <- c(1.34643, 2.14992)
 GMMRadSDs <- c(0.205605, 0.404244)
@@ -338,14 +368,14 @@ sowie ein nachfolgend ausgeführter Chi-Quadrat Test zeigen das die Daten nicht 
 Verteilung des Modells entsprechen. Insbesondere an den Enden der Modellverteilung
 sowie in der Mitte weichen die Daten deutlich ab.
 
-```{r QQ_GMM, echo = FALSE, fig.cap = "Inspect data", anchor = "figure", eval = eval_block}
+```{r QQ_GMM, echo = FALSE, eval = eval_block}
 QQplotGMM(coredata(sixthroot), GMMRadMeans, GMMRadSDs, GMMRadWeights)
 
 #sixthrootKS <- KStestMixtures(coredata(sixthroot), GMMRadMeans, GMMRadSDs, GMMRadWeights)
 sixthrootChis <- Chi2testMixtures(testdata, GMMRadMeans, GMMRadSDs, GMMRadWeights)
 ```
 
-```{r FFT, echo = FALSE, fig.cap = "Inspect data", anchor = "figure", eval = eval_block}
+```{r FFT, echo = FALSE, eval = eval_block}
 specsixthroot <- spectrum(sixthroot, spans = c(3,9))
 
 #get sampling frequency of data
@@ -362,17 +392,18 @@ plot(Mod(sixthrootFFT2[2:300]), type = "l", xlab = "Frequenz (Hz)")
 ```
 
 
-```{r , echo = FALSE, fig.cap = "Inspect data", anchor = "figure", eval = eval_block}
+```{r HMM Multivariate, echo = FALSE, eval = eval_block}
+modelData <- as.data.frame(coredata(tsAll))
+```
+
+```{re, echo = FALSE, eval = eval_block}
 
 ```
 
-```{r , echo = FALSE, fig.cap = "Inspect data", anchor = "figure", eval = eval_block}
+```{r , echo = FALSE, eval = eval_block}
 
 ```
 
-```{r , echo = FALSE, fig.cap = "Inspect data", anchor = "figure", eval = eval_block}
-
-```
 
 ```{r Jiachun NO3 data, child = "P2_child_script_Jiachun.Rmd", eval = eval_block}
 ```
