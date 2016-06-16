@@ -124,12 +124,12 @@ opts_knit$set(kfigr.prefix = TRUE)
 
 ```{r load, echo = FALSE}
 
-#FileName <- c("p2_Chirimachay_NO3","p2_Chirimachay_Netradiation.lrn","p2_Chirimachay_Precip.lrn")
-FileName <-c('Chirimachay_NO3','Chirimachay_Netradiation.lrn','Chirimachay_Precip.lrn')
+FileName <- c("p2_Chirimachay_NO3","p2_Chirimachay_Netradiation.lrn","p2_Chirimachay_Precip.lrn")
+#FileName <-c('P2_Chirimachay_NO3','Chirimachay_Netradiation.lrn','Chirimachay_Precip.lrn')
 
 ## Pfad bitte hier anpassen!!!
-#Directory  <- "../data/"
-Directory <-'C:/#Private/Studium/SoSe 2016/Temporales Data Mining/Uebung/Zettel2'
+Directory  <- "../data/"
+#Directory <-'C:/#Private/Studium/SoSe 2016/Temporales Data Mining/Uebung/Zettel2'
 
 
 NO3 <- ReadLRN(FileName[1],Directory)

@@ -3,6 +3,23 @@
 
 
 
+```{r load_packages_Benja, echo=FALSE, error=FALSE, message=FALSE, include=FALSE,eval=eval_block}
+#load packages
+packages <- c("tidyr", "dplyr", "DataIO", "lubridate", "zoo", "xts", "stringr", "timeSeries", "tseries", "car",
+              "AdaptGauss", "forecast", "kfigr", "dbt.RetroMAT", "RHmm", "FinTS", "knitr", "depmixS4")
+lapply(packages,library,character.only=TRUE)
+#set prefix for figure numbering
+#opts_knit$set(kfigr.prefix = TRUE)
+#figure captions in html with chunk options
+knit_hooks$set(htmlcap = function(before, options, envir) {
+  if(!before) {
+    paste('<p class="caption">',options$htmlcap,"</p>",sep="")
+    }
+    })
+
+```
+
+
 ```{r load_data, echo = FALSE}
 files <- list.files("../data", pattern = "p2_", full.names = TRUE)
 
@@ -68,12 +85,12 @@ summaryNO3 <- summarizeData(zooNO3)
 summaryPrecip <- summarizeData(zooPrecip, zero.as.nan = FALSE)
 ```
 
-Der Datensatz besteht aus einer Zeitreihe mit `r summaryData$NumDatPoints` Werten
-und beginnt `r summaryData$Start` und endet `r summaryData$End`. Gemessen wurde
-die Netto Strahlung in Watt je Quadratmeter mit einem Messintervall von `r summaryData$Delta`
-Minuten. Die Datenpunkte haben alle den `r summaryData$Regulär` und es fehlen
-`r summaryData$NumMissing` Datenpunkte. Das Minimum respektive das Maximum des
-Datensatzes liegen bei `r summaryData$Min` sowie `r summaryData$Max`.
+Der Datensatz besteht aus einer Zeitreihe mit `r summaryRad$NumDatPoints` Werten
+und beginnt `r summaryRad$Start` und endet `r summaryRad$End`. Gemessen wurde
+die Netto Strahlung in Watt je Quadratmeter mit einem Messintervall von `r summaryRad$Delta`
+Minuten. Die Datenpunkte haben alle den `r summaryRad$Regulär` und es fehlen
+`r summaryRad$NumMissing` Datenpunkte. Das Minimum respektive das Maximum des
+Datensatzes liegen bei `r summaryRad$Min` sowie `r summaryRad$Max`.
 
 ```{r inspect_data_2, echo = FALSE, htmlcap = figNum("Visuelle Inspektion des Datensatzes")}
 #check stationaritry with dickey fuller (package: tseries)
@@ -82,7 +99,7 @@ adf.test(zooRad, k = 0)
 plot(zooRad, xlab = "Zeit", ylab = "Netto Strahlung")
 ```
 
-```{r test plot, echo = FALSE, htmlcap = figNum("Differenz des Datensatzes")}
+```{r difference_plot, echo = FALSE, htmlcap = figNum("Differenz des Datensatzes")}
 #calculate difference
 zooraddiff <- diff(zooRad)
 plot(zooraddiff, xlab = "Zeit", ylab = "Differenze netto Strahlung")
@@ -93,7 +110,7 @@ im Datensatz gibt. Darüber hinaus handelt es sich um eine Flächenhafte Messgr�
 weshalb sich aller Wahrscheinlichkeit nach eine Wurzeltransformation der Daten
 vorteilhaft erweisen könnte.
 
-```{r sqrt, echo = FALSE, eval = eval_block}
+```{r sqrt, echo = FALSE}
 sqrtzooRad <- sqrt(zooRad)
 overviewPlot(coredata(sqrtzooRad))
 ```
@@ -103,12 +120,12 @@ Normalverteilt ist und einige Extreme Werte enthalten. Weitere Analyse zeigt
 das die 6. Wurzel der Daten zumindest die extremen Werte einfängt. Weiterhin
 zeigt sich das die Daten bimodal verteilt sind.
 
-```{r 6th root, echo = FALSE, eval = eval_block}
+```{r sixth_root, echo = FALSE}
 sixthroot <- zooRad^(1/6)
 overviewPlot(coredata(sixthroot))
 ```
 
-```{r GMM, echo = FALSE, eval = eval_block}
+```{r GMM_Benj, echo = FALSE}
 #GMMRad <- AdaptGauss(coredata(sixthroot))
 GMMRadMeans <- c(1.34643, 2.14992)
 GMMRadSDs <- c(0.205605, 0.404244)
@@ -117,7 +134,7 @@ GMMRadParRadius <- 0.0989202
 GMMRadRMS <- 0.1106062
 GMMRadBayBound <- 1.679349
 
-PlotMixtures(coredata(sixthroot), GMMRadMeans, GMMRadSDs, GMMRadWeights)
+PlotMixturesAndBoundaries(coredata(sixthroot), GMMRadMeans, GMMRadSDs, GMMRadWeights, SingleGausses = TRUE)
 ```
 
 Der erste Eindruck des Gauß-Mixturen Modells suggeriert das die 6. Wurzel aus dem
@@ -126,14 +143,14 @@ sowie ein nachfolgend ausgeführter Chi-Quadrat Test zeigen das die Daten nicht 
 Verteilung des Modells entsprechen. Insbesondere an den Enden der Modellverteilung
 sowie in der Mitte weichen die Daten deutlich ab.
 
-```{r QQ_GMM, echo = FALSE, eval = eval_block}
+```{r QQ_GMM_Benj, echo = FALSE}
 QQplotGMM(coredata(sixthroot), GMMRadMeans, GMMRadSDs, GMMRadWeights)
 
 #sixthrootKS <- KStestMixtures(coredata(sixthroot), GMMRadMeans, GMMRadSDs, GMMRadWeights)
-sixthrootChis <- Chi2testMixtures(testdata, GMMRadMeans, GMMRadSDs, GMMRadWeights)
+sixthrootChis <- Chi2testMixtures(coredata(sixthroot), GMMRadMeans, GMMRadSDs, GMMRadWeights)
 ```
 
-```{r FFT, echo = FALSE, eval = eval_block}
+```{r FFT_Benj, echo = FALSE, eval = eval_block}
 specsixthroot <- spectrum(sixthroot, spans = c(3,9))
 
 #get sampling frequency of data
@@ -150,14 +167,7 @@ plot(Mod(sixthrootFFT2[2:300]), type = "l", xlab = "Frequenz (Hz)")
 ```
 
 
-```{r HMM Multivariate, echo = FALSE, eval = eval_block}
+```{r HMM Multivariate_Benj, echo = FALSE, eval = eval_block}
 modelData <- as.data.frame(coredata(tsAll))
 ```
 
-```{re, echo = FALSE, eval = eval_block}
-
-```
-
-```{r , echo = FALSE, eval = eval_block}
-
-```

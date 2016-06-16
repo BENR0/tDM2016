@@ -4,12 +4,11 @@ author: "Benjamin Roesner, Marta Lemanczyk, Jiachun Zhang"
 output:
   html_document:
     css: style.css
-    fig_caption: true
-    fig_height: 5
-    fig_width: 7
+    fig_caption: yes
     fig_retina: 1
     highlight: pygments
-    number_sections: true
+    keep_md: no
+    number_sections: yes
     theme: spacelab
     toc: yes
     toc_depth: 2
@@ -258,5 +257,5 @@ knit_hooks$set(htmlcap = function(before, options, envir) {
 ```{r Jiachun NO3 Precip data, child = "P2_NO3_Precip.Rmd"}
 ```
 
-```{r Benjamin Radiation data, child = "P2_Radiation.Rmd", eval=eval_block}
+```{r Benjamin_Radiation_data, child = "P2_Rediation.Rmd"}
 ```
