@@ -1,3 +1,5 @@
 *.Rproj
+*.html
+*.Rhistory
 /worksheets
 .Rproj.user

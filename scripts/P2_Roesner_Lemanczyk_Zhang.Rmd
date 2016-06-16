@@ -1,19 +1,20 @@
 ---
-title: "Temporal Datamining WS 1"
+title: "Temporal Datamining WS 2"
 author: "Benjamin Roesner, Marta Lemanczyk, Jiachun Zhang"
 output:
   html_document:
-    fig_caption: yes
+    css: style.css
+    fig_caption: true
     fig_height: 5
     fig_width: 7
+    fig_retina: 1
     highlight: pygments
-    number_sections: yes
-    theme: united
+    number_sections: true
+    theme: spacelab
     toc: yes
     toc_depth: 2
   pdf_document:
     toc: yes
-bibliography: lit.bib
 ---
 ------
 
@@ -41,123 +42,368 @@ bibliography: lit.bib
 figNum = local({
   i = 0
   function(x) {
-    i <<- i + 1
-    paste('Figure ', i, ': ', x, sep = '')
+    i <-  i + 1
+    paste("Figure ", i, ": ", x, sep = "")
   }
 })
 
+
 #flag to easily change evaluation of code blocks in results section
-eval_block = TRUE
+eval_block <- FALSE
 #flag if reading and plotting should be cached
-cache_erg = FALSE
+cache_erg <- FALSE
 ```
 
 ```{r problem specific functions, echo = FALSE, include = FALSE}
-dataSizeZeros <- function(dataCol){
-  len <- length(dataCol)
-  lenZ <- length(which(dataCol == 0))
-  res <- list(NumDataPoints = len, NumMissing = lenZ)
+loadData <- function(flist, names = unlist(lapply(seq(1, length(flist)), function(x) paste0("d", x)))){
+  for (f in files){
+    assign(names[which(flist == f)], as.data.frame(ReadLRN(basename(f), dirname(f))$Data), envir = .GlobalEnv)
+    }
+}
+
+summarizeData <- function(data, zero.as.nan = TRUE){
+  if(class(data) == "zoo"){
+    #start and end points of ts
+    st <- start(data)
+    end <- end(data)
+    #sample intervall of data in minutes
+    delta <- deltat(data)/60
+    #check if ts is evenly spaced
+    reg <- ifelse(is.regular(data), "gleichen Abstand", "nicht den gleichen Abstand")
+  } else {
+    st <- NULL
+    end <- NULL
+    delta <- NULL
+    reg <- NULL
+    }
+  len <- length(data)
+  if(zero.as.nan){
+    lenZeros <- length(which(data == 0 | is.nan(data) | is.null(data)))
+  } else {
+    lenZeros <- length(which(is.nan(data) | is.null(data)))
+  }
+  
+  min <- min(data)
+  max <- max(data)
+  res <- list(Start = st, End = end, NumDataPoints = len, NumMissing = lenZeros, Min = min, Max = max, Regulär = reg, Delta = delta)
   return(res)
 }
+
+# Funktion, um die erste bzw.letzte 10 Ertraege zu sehen
+# Funktion, um die erste bzw.letzte 10 Ertraege zu sehen
+printData <- function(data){
+  print("Erste bzw. letzte 10 Werte des Datensatzes")
+  head(data, n = 10)
+  tail(data, n = 10)
+}
+
+# Histogram,PDEplot,QQplot,Boxplot,NaN Anzahl
+overviewPlot <- function(data, name = "data"){
+  par(mfrow = c(2,3)) 
+  #mat <- matrix(c(1,2,0,3,4,5),2,byrow = T)
+  #layout(mat,c(5,5,1),c(1,1))
+  
+  MinD <- nanmin(data)
+  MaxD <- nanmax(data)
+  
+  # Histogramm
+  hist(data, ylab = "Nr of Data")
+  
+  # PDE-Dichte
+  #PDEplot(data,title=name, xlab=name);  # Bei mir kann das Plot nicht verkleinert werden
+  pdeVal <- ParetoDensityEstimation(data, ParetoRadius(data))
+  plot(pdeVal$kernels, pdeVal$paretoDensity, type = "l", xlab = "Data", ylab = "PDE", main = name)
+  #plot(density(data),main=name);
+  
+  plot.new()
+  
+  # QQplot
+  qqnorm(data, ylab = name)
+  gridOn() 
+  
+  # Boxplot
+  boxplot(data, xlab=name, main = paste("Range:[ ", num2str(round(MinD, 5)), " ,", num2str(round(MaxD, 5)) ," ]"), axes = FALSE)
+  
+  
+  # Barplot fuer die NaNs
+  NaNs <- (sum(is.infinite(data)) + sum(is.na(data)))/length(data)
+  barplot(NaNs, ylab = "NaNs in %", main = paste(round(NaNs, 4), " %"), xlim = c(0, 3), ylim = c(0, 1))
+  if (any(is.nan(data), na.rm = TRUE)) 
+    print("NaNs in Data found. This message is only important, if after rounding the percent of NaN is zero in the bar plot.")
+  if (any(is.infinite(data), na.rm = TRUE)) 
+    warning("Infinite values in Data found.")
+  
+  par(mfrow = c(1,1))
+}
+
+#modified adapt gauss function without active input through shiny app
+getOptGauss <- function(Data, Kernels = ParetoDensityEstimation(Data, paretoRadius = ParetoRadius(Data))$kernels, ParetoDensity = ParetoDensityEstimation(Data, paretoRadius = ParetoRadius(Data))$paretoDensity, fast = TRUE){ 
+    # Teste RMS fuer einen Gauss
+    Mean1 <- mean(Data)
+    Deviation1 <- sd(Data)
+    Weight1 <- 1
+    Var=EMGauss(Data,fast=fast)
+    Mean1 <- Var$Means
+    Deviation1 <- Var$SDs
+    Weight1 <- Var$Weights
+    Fi <- dnorm(Kernels,Mean1,Deviation1)*Weight1
+    RMS1 <- sqrt(sum((Fi-ParetoDensity)^2))
+    
+    # Teste RMS fuer 2 Gauss
+    Means2 <- c(0,0)
+    Deviations2 <- c(0,0)
+    Weights2 <- c(0,0)
+    Valskmeans <- kmeans(Data,2,iter.max=100)
+    KValues <- Valskmeans$cluster
+    #print(KValues2)
+    for (i in 1:2){
+      Means2[i] <- mean(Data[KValues==i])
+      Deviations2[i] <- sd(Data[KValues==i])
+      Weights2[i] <- sum(KValues==i)
+      if (is.na(Deviations2[i])) {Deviations2[i] <- 0}
+    }
+    Weights2 <- Weights2/length(KValues)
+    Var=EMGauss(Data,Means2,Deviations2,Weights2,10,fast=fast)
+    Means2 <- Var$Means
+    Deviations2 <- Var$SDs
+    Weights2 <- Var$Weights
+    Fi <- 0
+    for (i in 1:2){
+      Fi <- Fi+dnorm(Kernels,Means2[i],Deviations2[i])*Weights2[i]
+    }
+    RMS2 <- sqrt(sum((Fi-ParetoDensity)^2))
+    
+    # Teste RMS fuer 3 Gauss
+    Means3 <- c(0,0,0)
+    Deviations3 <- c(0,0,0)
+    Weights3 <- c(0,0,0)
+    Valskmeans <- kmeans(Data,3,iter.max=100)
+    KValues <- Valskmeans$cluster
+    #print(KValues2)
+    for (i in 1:3){
+      Means3[i] <- mean(Data[KValues==i])
+      Deviations3[i] <- sd(Data[KValues==i])
+      Weights3[i] <- sum(KValues==i)
+      if (is.na(Deviations3[i])) {Deviations3[i] <- 0}
+    }
+    Weights3 <- Weights3/length(KValues)
+    Var=EMGauss(Data,Means3,Deviations3,Weights3,10,fast=fast)
+    Means3 <- Var$Means
+    Deviations3 <- Var$SDs
+    Weights3 <- Var$Weights
+    Fi <- 0
+    for (i in 1:3){
+      Fi <- Fi+dnorm(Kernels,Means3[i],Deviations3[i])*Weights3[i]
+    }
+    RMS3 <- sqrt(sum((Fi-ParetoDensity)^2))
+    
+    # ueberpruefe ob RMS1( 1 Gauss) oder RMS2 (3 Gauss ) kleiner ist. Speichere zugehoerige means, deviations und weights
+    SSE <- c(RMS1^2*log(3), RMS2^2*log(3*2), RMS3^2*log(3*3))
+    #SSE <- c(RMS1^2*log(3), RMS2^2*log(3*2))
+    minSSEind <- which.min(SSE)
+    switch(as.character(minSSEind),
+           "1" = {means <- Mean1
+                deviations <- Deviation1
+                weights <- Weight1
+                rms <- RMS1},
+           "2" = {means <- Means2
+                deviations <- Deviations2
+                weights <- Weights2
+                rms <- RMS2},
+           "3" = {means <- Means3
+                deviations <- Deviations3
+                weights <- Weights3
+                rms <- RMS3}
+           )
+    # Ordne gaussians nach mean
+    order <- order(means)
+    means <- means[order]
+    deviations <- deviations[order]
+    weights <- weights[order]
+    rms <- rms
+    out=list(means=means,deviations=deviations,weights=weights, rms = rms)
+    
+    
+    return(out)
+  }
 ```
 
-```{r load_packages,echo=FALSE, error=FALSE, message=FALSE, include=FALSE}
+```{r load_packages, echo=FALSE, error=FALSE, message=FALSE, include=FALSE}
 #load packages
-packages <- c("tidyr","dplyr","lubridate","zoo","stringr","timeSeries", "tseries", "car", "AdaptGauss", "forecast", "kfigr")
+packages <- c("tidyr", "dplyr", "DataIO", "lubridate", "zoo", "xts", "stringr", "timeSeries", "tseries", "car",
+              "AdaptGauss", "forecast", "kfigr", "dbt.RetroMAT", "RHmm", "FinTS", "knitr", "deepmixS4")
 lapply(packages,library,character.only=TRUE)
 #set prefix for figure numbering
 #opts_knit$set(kfigr.prefix = TRUE)
+#figure captions in html with chunk options
+knit_hooks$set(htmlcap = function(before, options, envir) {
+  if(!before) {
+    paste('<p class="caption">',options$htmlcap,"</p>",sep="")
+    }
+    })
 
 ```
 
 
-```{r load_data, echo=FALSE}
-dataNO3 <- read.table("../data/p2_Chirimachay_NO3.lrn", skip = 4, header = TRUE, fill = TRUE)
-dataRad <- read.table("../data/p2_Chirimachay_Netradiation.lrn", skip = 4, header = TRUE, fill = TRUE)
-dataPrecip <- read.table("../data/p2_Chirimachay_Precip.lrn", skip = 4, header = TRUE, fill = TRUE)
+```{r load_data, echo = FALSE}
+files <- list.files("../data", pattern = "p2_", full.names = TRUE)
 
+loadData(files, c("dataRad", "dataNO3", "dataPrecip"))
+
+#pad hous and mins to to digits
 dataNO3$HH <- str_pad(dataNO3$HH, 2, c("left"), "0")
 dataNO3$Min <- str_pad(dataNO3$Min, 2, c("left"), "0")
 
 dataNO3 <- unite_(dataNO3, "time", c("HH", "Min"), sep = ":")
 dataNO3 <- unite_(dataNO3, "date", c("YYYY", "MM", "DD"), sep = "-")
 dataNO3 <- unite_(dataNO3, "datetime", c("date", "time" ), sep = " ")
-dataNO3 <- select(dataNO3, datetime, NNO3mgl)
+#dataNO3 <- select(dataNO3, datetime, NNO3mgl)
 dataNO3$datetime <- parse_date_time(dataNO3$datetime, order = "Ymd HM")
+zooNO3 <- read.zoo((data.frame(datetime = dataNO3$datetime, no3 = dataNO3$NNO3mgl)))
 
-
+#pad hous and mins to to digits
 dataRad$HH <- str_pad(dataRad$HH, 2, c("left"), "0")
 dataRad$Min <- str_pad(dataRad$Min, 2, c("left"), "0")
 
 dataRad <- unite_(dataRad, "time", c("HH", "Min"), sep = ":")
 dataRad <- unite_(dataRad, "date", c("YYYY", "MM", "DD"), sep = "-")
 dataRad <- unite_(dataRad, "datetime", c("date", "time" ), sep = " ")
-dataRad <- select(dataRad, datetime, CorrectedNetRadiationWm2)
+#dataRad <- select(dataRad, datetime, CorrectedNetRadiationWm2)
 dataRad$datetime <- parse_date_time(dataRad$datetime, order = "Ymd HM")
+zooRad <- read.zoo((data.frame(datetime = dataRad$datetime, rad = dataRad$CorrectedNetRadiationWm2)))
 
-
+#pad hous and mins to to digits
 dataPrecip$HH <- str_pad(dataPrecip$HH, 2, c("left"), "0")
 dataPrecip$Min <- str_pad(dataPrecip$Min, 2, c("left"), "0")
+
+#pad years in Precipiation data to full years
+dataPrecip$YYYY <- str_pad(dataPrecip$YYYY, 3, c("left"), "0")
+dataPrecip$YYYY <- str_pad(dataPrecip$YYYY, 4, c("left"), "2")
 
 dataPrecip <- unite_(dataPrecip, "time", c("HH", "Min"), sep = ":")
 dataPrecip <- unite_(dataPrecip, "date", c("YYYY", "MM", "DD"), sep = "-")
 dataPrecip <- unite_(dataPrecip, "datetime", c("date", "time" ), sep = " ")
-dataPrecip <- select(dataPrecip, datetime, PrecipitationMM)
+#dataPrecip <- select(dataPrecip, datetime, PrecipitationMM)
 dataPrecip$datetime <- parse_date_time(dataPrecip$datetime, order = "Ymd HM")
+zooPrecip <- read.zoo((data.frame(datetime = dataPrecip$datetime, prec = dataPrecip$PrecipitationMM)))
+
+#start all series at the same time
+zooNO3 <- window(zooNO3, start = start(zooRad))
+zooPrecip <- window(zooPrecip, start = start(zooRad))
+#aggregate twelve hourly
+aggPrecip <- aggregate(zooPrecip, time(zooPrecip) - as.numeric(time(zooPrecip)) %% (12*60*60), sum)
+#set timezone variable else time zone will be lost while merging zoo objects
+Sys.setenv(TZ="UTC")
+agg2 <- merge.zoo(zooRad, zooNO3)
+agg2 <- aggregate(agg2, time(agg2) - as.numeric(time(agg2)) %% (12*60*60), mean)
+#merge timeseries
+tsAll <- merge.zoo(agg2, aggPrecip)
+#trim leading and trailing nan values
+tsAll <- na.trim(tsAll)
 
 ```
-#### Überblick über die Variablen
 
-
-```{r inspect_data_length, echo=FALSE}
-#size of data sets and how many missing values
-missNO3 <- dataSizeZeros(dataNO3$NNO3mgl)
-missPrecip <- dataSizeZeros(dataPrecip$PrecipitationMM)
-missRad <- dataSizeZeros(dataRad$CorrectedNetRadiationWm2)
-
-#range of data points
-summary(dataNO3)
-summary(dataPrecip)
-summary(dataRad)
+# Überblick über die Variablen
+```{r inspect_data_length, echo = FALSE}
+summaryRad <- summarizeData(zooRad)
+summaryNO3 <- summarizeData(zooNO3)
+summaryPrecip <- summarizeData(zooPrecip, zero.as.nan = FALSE)
 ```
 
-```{r inspect_data_plot, echo=FALSE, fig.cap = "Inspect data", anchor = "figure"}
-#get visual impression of data
-plot(dataNO3$NNO3mgl, pch = "l")
-plot(dataPrecip$PrecipitationMM,pch = "l")
-plot(dataRad$CorrectedNetRadiationWm2,pch = "l")
+Der Datensatz besteht aus einer Zeitreihe mit `r summaryData$NumDatPoints` Werten
+und beginnt `r summaryData$Start` und endet `r summaryData$End`. Gemessen wurde
+die Netto Strahlung in Watt je Quadratmeter mit einem Messintervall von `r summaryData$Delta`
+Minuten. Die Datenpunkte haben alle den `r summaryData$Regulär` und es fehlen
+`r summaryData$NumMissing` Datenpunkte. Das Minimum respektive das Maximum des
+Datensatzes liegen bei `r summaryData$Min` sowie `r summaryData$Max`.
+
+```{r inspect_data_2, echo = FALSE, htmlcap = figNum("Visuelle Inspektion des Datensatzes")}
+#check stationaritry with dickey fuller (package: tseries)
+adf.test(zooRad, k = 0)
+
+plot(zooRad, xlab = "Zeit", ylab = "Netto Strahlung")
+```
+
+```{r test plot, echo = FALSE, htmlcap = figNum("Differenz des Datensatzes")}
+#calculate difference
+zooraddiff <- diff(zooRad)
+plot(zooraddiff, xlab = "Zeit", ylab = "Differenze netto Strahlung")
+```
+
+Da Strahlung gemessen wird ist zu erwarten das es starken dijurnale Schwankungen
+im Datensatz gibt. Darüber hinaus handelt es sich um eine Flächenhafte Messgröße
+weshalb sich aller Wahrscheinlichkeit nach eine Wurzeltransformation der Daten
+vorteilhaft erweisen könnte.
+
+```{r sqrt, echo = FALSE, eval = eval_block}
+sqrtzooRad <- sqrt(zooRad)
+overviewPlot(coredata(sqrtzooRad))
+```
+
+Es zeigt sich das die Verteilung der Daten trotz Wurzeltransformation nicht
+Normalverteilt ist und einige Extreme Werte enthalten. Weitere Analyse zeigt
+das die 6. Wurzel der Daten zumindest die extremen Werte einfängt. Weiterhin
+zeigt sich das die Daten bimodal verteilt sind.
+
+```{r 6th root, echo = FALSE, eval = eval_block}
+sixthroot <- zooRad^(1/6)
+overviewPlot(coredata(sixthroot))
+```
+
+```{r GMM, echo = FALSE, eval = eval_block}
+#GMMRad <- AdaptGauss(coredata(sixthroot))
+GMMRadMeans <- c(1.34643, 2.14992)
+GMMRadSDs <- c(0.205605, 0.404244)
+GMMRadWeights <- c(0.486, 0.507)
+GMMRadParRadius <- 0.0989202
+GMMRadRMS <- 0.1106062
+GMMRadBayBound <- 1.679349
+
+PlotMixtures(coredata(sixthroot), GMMRadMeans, GMMRadSDs, GMMRadWeights)
+```
+
+Der erste Eindruck des Gauß-Mixturen Modells suggeriert das die 6. Wurzel aus dem
+Datensatz gut mittels zweier Gauß Funktionen modelliert werden kann. Der QQ-Plot
+sowie ein nachfolgend ausgeführter Chi-Quadrat Test zeigen das die Daten nicht der
+Verteilung des Modells entsprechen. Insbesondere an den Enden der Modellverteilung
+sowie in der Mitte weichen die Daten deutlich ab.
+
+```{r QQ_GMM, echo = FALSE, eval = eval_block}
+QQplotGMM(coredata(sixthroot), GMMRadMeans, GMMRadSDs, GMMRadWeights)
+
+#sixthrootKS <- KStestMixtures(coredata(sixthroot), GMMRadMeans, GMMRadSDs, GMMRadWeights)
+sixthrootChis <- Chi2testMixtures(testdata, GMMRadMeans, GMMRadSDs, GMMRadWeights)
+```
+
+```{r FFT, echo = FALSE, eval = eval_block}
+specsixthroot <- spectrum(sixthroot, spans = c(3,9))
+
+#get sampling frequency of data
+freq <- frequency(sixthroot)
+Nyfreq <- freq/2
+Nf <- length(coredata(sixthroot))/2
+
+
+sixthrootFFT <- fft(coredata(sixthroot))/length(coredata(sixthroot))
+plot(Mod(sixthrootFFT[2:4000]), type = "l", xlab = "Frequenz (Hz)")
+
+sixthrootFFT2 <- ifft(coredata(sixthroot))/length(coredata(sixthroot))
+plot(Mod(sixthrootFFT2[2:300]), type = "l", xlab = "Frequenz (Hz)")
 ```
 
 
-```{r inspect_data_hist echo=FALSE}
-hist(dataNO3$NNO3mgl)
-hist(dataPrecip$PrecipitationMM)
-hist(dataRad$CorrectedNetRadiationWm2)
-#check if data ist normal distributed
-qqPlot(data$NNO3mgl)
-qqPlot(dataPrecip$PrecipitationMM)
-qqPlot(dataRad$CorrectedNetRadiationWm2)
+```{r HMM Multivariate, echo = FALSE, eval = eval_block}
+modelData <- as.data.frame(coredata(tsAll))
+```
+
+```{re, echo = FALSE, eval = eval_block}
+
+```
+
+```{r , echo = FALSE, eval = eval_block}
+
 ```
 
 
-```{r acf_pacf,echo=FALSE, warning=FALSE, message=FALSE, results='hide'}
-#determining model components
-Acf(tsdata, lag.max = 30)
-#acf plot cuts of after 3 lag => Ma = 3
-Pacf(tsdata, lag.max = 30)
-#pacf cuts of at lag 1 => AR = 1
-```
-
-```{r modelling,echo=FALSE, warning=FALSE, message=FALSE, results='hide'}
-fitarima <- Arima(tsdata, c(1,1,3), method = "ML", transform.pars = FALSE)
-#check redsiduals
-resid <- residuals(fitarima)
-Acf(resid)
-Box.test(resid, type = "Ljung")#
-#in the acf plot not all values ar within the threshold but box test suggests that
-#residuals can be considered white noise
-#
-plot(forecast(fitarima), col = "green")
-lines(as.ts(tsdata), add = TRUE)
-
+```{r Jiachun NO3 data, child = "P2_child_script_Jiachun.Rmd", eval = eval_block}
 ```
