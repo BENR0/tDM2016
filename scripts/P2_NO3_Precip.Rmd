@@ -18,7 +18,7 @@ output:
 ---
 
 
-```{r chunk options and functions, echo=FALSE, eval = TRUE}
+```{r chunk options and functions_jiachun, echo=FALSE, eval = FALSE}
 #eval: evaluate code chunk true/false
 #include: include chunk in ouput document true/false (code still evaluated and plots generated)
 #echo: include source code true/
@@ -56,7 +56,7 @@ cache_erg <- FALSE
 ```
 
 
-```{r problem specific functions, echo = FALSE, include = FALSE}
+```{r problem specific functions_jiachun, echo = FALSE, include = FALSE, eval=eval_block}
 # Funktion, um die erste bzw.letzte 10 Ertraege zu sehen
 printData <- function(data){
   print("Erste bzw. letzte 10 Werte des Datensatzes")
@@ -109,7 +109,7 @@ overviewPlot <- function(data, name = "data"){
 
 ```
 
-```{r load_packages, echo=FALSE, error=FALSE, message=FALSE, include=FALSE}
+```{r load_packages_jiachun, echo=FALSE, error=FALSE, message=FALSE, include=FALSE,eval=eval_block}
 #load packages
 packages <- c('ABCanalysis','AdaptGauss','DataVisualisation','GabrielGraph','GabrielGraph','Umatrix','dbt.attributes','dbt.BDM','dbt.CART','ClassAnalysis','dbt.classifiers','dbt.ColorScale','dbt.ColorScale','DataIO','dbt.DelaunayVoronoi','Dist','dbt.Distances','dbt.DNAarrays','dbt.general','dbt.GraphAlgorithms','dbt.HESKES','dbt.IGCfiles','dbt.InteractiveTools','dbt.MixtureModel','dbt.nanHandling','dbt.NeuronalNets','pareto','dbt.Plot','dbt.Projections','dbt.RetroMAT','dbt.Statistics','reshape2','caTools','dbt.Transforms') #dbt Pakete
 packages = c(packages,"kfigr", "knitr") #Pakete für knit

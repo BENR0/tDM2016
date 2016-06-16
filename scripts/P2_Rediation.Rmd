@@ -1,0 +1,163 @@
+
+<!-- Ein-Variable-Analysis von Radiation -->
+
+
+
+```{r load_data, echo = FALSE}
+files <- list.files("../data", pattern = "p2_", full.names = TRUE)
+
+loadData(files, c("dataRad", "dataNO3", "dataPrecip"))
+
+#pad hous and mins to to digits
+dataNO3$HH <- str_pad(dataNO3$HH, 2, c("left"), "0")
+dataNO3$Min <- str_pad(dataNO3$Min, 2, c("left"), "0")
+
+dataNO3 <- unite_(dataNO3, "time", c("HH", "Min"), sep = ":")
+dataNO3 <- unite_(dataNO3, "date", c("YYYY", "MM", "DD"), sep = "-")
+dataNO3 <- unite_(dataNO3, "datetime", c("date", "time" ), sep = " ")
+#dataNO3 <- select(dataNO3, datetime, NNO3mgl)
+dataNO3$datetime <- parse_date_time(dataNO3$datetime, order = "Ymd HM")
+zooNO3 <- read.zoo((data.frame(datetime = dataNO3$datetime, no3 = dataNO3$NNO3mgl)))
+
+#pad hous and mins to to digits
+dataRad$HH <- str_pad(dataRad$HH, 2, c("left"), "0")
+dataRad$Min <- str_pad(dataRad$Min, 2, c("left"), "0")
+
+dataRad <- unite_(dataRad, "time", c("HH", "Min"), sep = ":")
+dataRad <- unite_(dataRad, "date", c("YYYY", "MM", "DD"), sep = "-")
+dataRad <- unite_(dataRad, "datetime", c("date", "time" ), sep = " ")
+#dataRad <- select(dataRad, datetime, CorrectedNetRadiationWm2)
+dataRad$datetime <- parse_date_time(dataRad$datetime, order = "Ymd HM")
+zooRad <- read.zoo((data.frame(datetime = dataRad$datetime, rad = dataRad$CorrectedNetRadiationWm2)))
+
+#pad hous and mins to to digits
+dataPrecip$HH <- str_pad(dataPrecip$HH, 2, c("left"), "0")
+dataPrecip$Min <- str_pad(dataPrecip$Min, 2, c("left"), "0")
+
+#pad years in Precipiation data to full years
+dataPrecip$YYYY <- str_pad(dataPrecip$YYYY, 3, c("left"), "0")
+dataPrecip$YYYY <- str_pad(dataPrecip$YYYY, 4, c("left"), "2")
+
+dataPrecip <- unite_(dataPrecip, "time", c("HH", "Min"), sep = ":")
+dataPrecip <- unite_(dataPrecip, "date", c("YYYY", "MM", "DD"), sep = "-")
+dataPrecip <- unite_(dataPrecip, "datetime", c("date", "time" ), sep = " ")
+#dataPrecip <- select(dataPrecip, datetime, PrecipitationMM)
+dataPrecip$datetime <- parse_date_time(dataPrecip$datetime, order = "Ymd HM")
+zooPrecip <- read.zoo((data.frame(datetime = dataPrecip$datetime, prec = dataPrecip$PrecipitationMM)))
+
+#start all series at the same time
+zooNO3 <- window(zooNO3, start = start(zooRad))
+zooPrecip <- window(zooPrecip, start = start(zooRad))
+#aggregate twelve hourly
+aggPrecip <- aggregate(zooPrecip, time(zooPrecip) - as.numeric(time(zooPrecip)) %% (12*60*60), sum)
+#set timezone variable else time zone will be lost while merging zoo objects
+Sys.setenv(TZ="UTC")
+agg2 <- merge.zoo(zooRad, zooNO3)
+agg2 <- aggregate(agg2, time(agg2) - as.numeric(time(agg2)) %% (12*60*60), mean)
+#merge timeseries
+tsAll <- merge.zoo(agg2, aggPrecip)
+#trim leading and trailing nan values
+tsAll <- na.trim(tsAll)
+
+```
+
+# Überblick über die Variablen
+```{r inspect_data_length, echo = FALSE}
+summaryRad <- summarizeData(zooRad)
+summaryNO3 <- summarizeData(zooNO3)
+summaryPrecip <- summarizeData(zooPrecip, zero.as.nan = FALSE)
+```
+
+Der Datensatz besteht aus einer Zeitreihe mit `r summaryData$NumDatPoints` Werten
+und beginnt `r summaryData$Start` und endet `r summaryData$End`. Gemessen wurde
+die Netto Strahlung in Watt je Quadratmeter mit einem Messintervall von `r summaryData$Delta`
+Minuten. Die Datenpunkte haben alle den `r summaryData$Regulär` und es fehlen
+`r summaryData$NumMissing` Datenpunkte. Das Minimum respektive das Maximum des
+Datensatzes liegen bei `r summaryData$Min` sowie `r summaryData$Max`.
+
+```{r inspect_data_2, echo = FALSE, htmlcap = figNum("Visuelle Inspektion des Datensatzes")}
+#check stationaritry with dickey fuller (package: tseries)
+adf.test(zooRad, k = 0)
+
+plot(zooRad, xlab = "Zeit", ylab = "Netto Strahlung")
+```
+
+```{r test plot, echo = FALSE, htmlcap = figNum("Differenz des Datensatzes")}
+#calculate difference
+zooraddiff <- diff(zooRad)
+plot(zooraddiff, xlab = "Zeit", ylab = "Differenze netto Strahlung")
+```
+
+Da Strahlung gemessen wird ist zu erwarten das es starken dijurnale Schwankungen
+im Datensatz gibt. Darüber hinaus handelt es sich um eine Flächenhafte Messgröße
+weshalb sich aller Wahrscheinlichkeit nach eine Wurzeltransformation der Daten
+vorteilhaft erweisen könnte.
+
+```{r sqrt, echo = FALSE, eval = eval_block}
+sqrtzooRad <- sqrt(zooRad)
+overviewPlot(coredata(sqrtzooRad))
+```
+
+Es zeigt sich das die Verteilung der Daten trotz Wurzeltransformation nicht
+Normalverteilt ist und einige Extreme Werte enthalten. Weitere Analyse zeigt
+das die 6. Wurzel der Daten zumindest die extremen Werte einfängt. Weiterhin
+zeigt sich das die Daten bimodal verteilt sind.
+
+```{r 6th root, echo = FALSE, eval = eval_block}
+sixthroot <- zooRad^(1/6)
+overviewPlot(coredata(sixthroot))
+```
+
+```{r GMM, echo = FALSE, eval = eval_block}
+#GMMRad <- AdaptGauss(coredata(sixthroot))
+GMMRadMeans <- c(1.34643, 2.14992)
+GMMRadSDs <- c(0.205605, 0.404244)
+GMMRadWeights <- c(0.486, 0.507)
+GMMRadParRadius <- 0.0989202
+GMMRadRMS <- 0.1106062
+GMMRadBayBound <- 1.679349
+
+PlotMixtures(coredata(sixthroot), GMMRadMeans, GMMRadSDs, GMMRadWeights)
+```
+
+Der erste Eindruck des Gauß-Mixturen Modells suggeriert das die 6. Wurzel aus dem
+Datensatz gut mittels zweier Gauß Funktionen modelliert werden kann. Der QQ-Plot
+sowie ein nachfolgend ausgeführter Chi-Quadrat Test zeigen das die Daten nicht der
+Verteilung des Modells entsprechen. Insbesondere an den Enden der Modellverteilung
+sowie in der Mitte weichen die Daten deutlich ab.
+
+```{r QQ_GMM, echo = FALSE, eval = eval_block}
+QQplotGMM(coredata(sixthroot), GMMRadMeans, GMMRadSDs, GMMRadWeights)
+
+#sixthrootKS <- KStestMixtures(coredata(sixthroot), GMMRadMeans, GMMRadSDs, GMMRadWeights)
+sixthrootChis <- Chi2testMixtures(testdata, GMMRadMeans, GMMRadSDs, GMMRadWeights)
+```
+
+```{r FFT, echo = FALSE, eval = eval_block}
+specsixthroot <- spectrum(sixthroot, spans = c(3,9))
+
+#get sampling frequency of data
+freq <- frequency(sixthroot)
+Nyfreq <- freq/2
+Nf <- length(coredata(sixthroot))/2
+
+
+sixthrootFFT <- fft(coredata(sixthroot))/length(coredata(sixthroot))
+plot(Mod(sixthrootFFT[2:4000]), type = "l", xlab = "Frequenz (Hz)")
+
+sixthrootFFT2 <- ifft(coredata(sixthroot))/length(coredata(sixthroot))
+plot(Mod(sixthrootFFT2[2:300]), type = "l", xlab = "Frequenz (Hz)")
+```
+
+
+```{r HMM Multivariate, echo = FALSE, eval = eval_block}
+modelData <- as.data.frame(coredata(tsAll))
+```
+
+```{re, echo = FALSE, eval = eval_block}
+
+```
+
+```{r , echo = FALSE, eval = eval_block}
+
+```
