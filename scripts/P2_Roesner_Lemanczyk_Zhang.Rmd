@@ -1,21 +1,24 @@
 ---
-title: "Temporal Datamining WS 2"
+title: "Teporales Data Mining, SS 2016"
+subtitle: "Projekt 2, Wissen aus Hydrologie"
 author: "Benjamin Roesner, Marta Lemanczyk, Jiachun Zhang"
 output:
   html_document:
     css: style.css
     fig_caption: yes
     fig_retina: 1
+    fig_height: 5
+    fig_width: 7
     highlight: pygments
-    keep_md: no
     number_sections: yes
-    theme: spacelab
+    theme: united
+    keep_md: no
     toc: yes
-    toc_depth: 2
+    toc_depth: 3
   pdf_document:
+    highlight: zenburn
     toc: yes
 ---
-------
 
 ```{r chunk options and functions, echo=FALSE, eval = TRUE}
 #eval: evaluate code chunk true/false
@@ -41,7 +44,7 @@ output:
 figNum = local({
   i = 0
   function(x) {
-    i <-  i + 1
+    i <<-  i + 1
     paste("Figure ", i, ": ", x, sep = "")
   }
 })
@@ -66,7 +69,7 @@ summarizeData <- function(data, zero.as.nan = TRUE){
     st <- start(data)
     end <- end(data)
     #sample intervall of data in minutes
-    delta <- deltat(data)/60
+    delta <- deltat(data)/60      #deltat returns the time interval between observations
     #check if ts is evenly spaced
     reg <- ifelse(is.regular(data), "gleichen Abstand", "nicht den gleichen Abstand")
   } else {
@@ -88,7 +91,7 @@ summarizeData <- function(data, zero.as.nan = TRUE){
   return(res)
 }
 
-# Funktion, um die erste bzw.letzte 10 Ertraege zu sehen
+
 # Funktion, um die erste bzw.letzte 10 Ertraege zu sehen
 printData <- function(data){
   print("Erste bzw. letzte 10 Werte des Datensatzes")
@@ -237,19 +240,19 @@ packages <- c('ABCanalysis','AdaptGauss','DataVisualisation','GabrielGraph','Gab
 packages = c(packages,"kfigr", "knitr") #Pakete für knit
 packages = c(packages,'FinTS','tseries') #Pakete für GARCH
 
-packages <- c(packages, "tidyr", "dplyr", "lubridate", "zoo", "stringr", "timeSeries",  "car", "forecast", "dbt.RetroMAT", "RHmm",  "depmixS4")  # from Benjamin
+packages <- c(packages, "tidyr", "dplyr", "lubridate", "zoo", "stringr", "timeSeries",  "car", "forecast", "dbt.RetroMAT", "RHmm",  "depmixS4",'pracma')  # from Benjamin
 
 lapply(packages,library,character.only=TRUE)
 
 #set prefix for figure numbering
-#opts_knit$set(kfigr.prefix = TRUE)
+opts_knit$set(kfigr.prefix = TRUE)
 
 #figure captions in html with chunk options
-knit_hooks$set(htmlcap = function(before, options, envir) {
-  if(!before) {
-    paste('<p class="caption">',options$htmlcap,"</p>",sep="")
-    }
-    })
+# knit_hooks$set(htmlcap = function(before, options, envir) {
+#   if(!before) {
+#     paste('<p class="caption">',options$htmlcap,"</p>",sep="")
+#     }
+#     })
 
 ```
 
@@ -258,4 +261,8 @@ knit_hooks$set(htmlcap = function(before, options, envir) {
 ```
 
 ```{r Benjamin_Radiation_data, child = "P2_Rediation.Rmd"}
+```
+
+
+```{r Corvarianzanalysis, child = "P2_Corvarianzanalysis",eval=eval_block}
 ```

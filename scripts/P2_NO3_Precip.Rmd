@@ -226,11 +226,11 @@ dput(res1)
 ab <- Bayes4Mixtures(transNO3, Werte1$Means, Werte1$SDs, Werte1$Weights, PlotIt = T) 
 ```
 
-```{r GMM plot, echo = FALSE,fig.cap = figNum("GMM für tranformierte NO3 ohne Nullen, 3 Gauss"),eval = eval_block}
+```{r GMM plot, echo = FALSE,fig.cap = figNum("GMM für tranformierte NO3 ohne Nullen, 3 Gauss")}
 Werte1 <- list(Means = c(7.029219, 17.786148, 29.106267), 
            SDs = c(5.08932, 4.50063, 5.69700), 
            Weights = c( 0.176, 0.348, 0.490))
-res1 <- AdaptGauss(transNO3, Werte1$Means, Werte1$SDs, Werte1$Weights)
+PlotMixturesAndBoundaries(transNO3, Werte1$Means, Werte1$SDs, Werte1$Weights,SingleGausses=T, lwd=3)
 ```
 
 ```{r gmm verification plot, echo = FALSE, fig.cap = figNum("QQplot zur Verifizierung, Daten gegen GMM")}
@@ -435,7 +435,7 @@ ab <- Bayes4Mixtures(transPrec, Werte2$Means, Werte2$SDs, Werte2$Weights, PlotIt
 Werte2 <- list(Means = c(126.0190, 429.6519, 712.7960), 
            SDs = c(121.8712, 122.5664, 135.4684), 
            Weights = c( 0.343, 0.224, 0.553))
-res2 <- AdaptGauss(transPrec, Werte2$Means, Werte2$SDs, Werte2$Weights)
+PlotMixturesAndBoundaries(transNO3, Werte1$Means, Werte1$SDs, Werte1$Weights,SingleGausses=T, lwd=3)
 ```
 
 ```{r gmm verification plot_Precip, echo = FALSE, fig.cap = figNum("QQplot zur Verifizierung, Daten gegen GMM")}
@@ -483,5 +483,4 @@ detach(Prec)
 ***
 
 
-# Beschreiben Sie den Wissensgewinn durch diese Modelle. Wie und wodurch wird NO3 beeinflusst?
 

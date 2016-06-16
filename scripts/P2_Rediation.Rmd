@@ -9,13 +9,13 @@ packages <- c("tidyr", "dplyr", "DataIO", "lubridate", "zoo", "xts", "stringr", 
               "AdaptGauss", "forecast", "kfigr", "dbt.RetroMAT", "RHmm", "FinTS", "knitr", "depmixS4")
 lapply(packages,library,character.only=TRUE)
 #set prefix for figure numbering
-#opts_knit$set(kfigr.prefix = TRUE)
+opts_knit$set(kfigr.prefix = TRUE)
 #figure captions in html with chunk options
-knit_hooks$set(htmlcap = function(before, options, envir) {
-  if(!before) {
-    paste('<p class="caption">',options$htmlcap,"</p>",sep="")
-    }
-    })
+# knit_hooks$set(htmlcap = function(before, options, envir) {
+#   if(!before) {
+#     paste('<p class="caption">',options$htmlcap,"</p>",sep="")
+#     }
+#     })
 
 ```
 
@@ -26,15 +26,15 @@ files <- list.files("../data", pattern = "p2_", full.names = TRUE)
 loadData(files, c("dataRad", "dataNO3", "dataPrecip"))
 
 #pad hous and mins to to digits
-dataNO3$HH <- str_pad(dataNO3$HH, 2, c("left"), "0")
+dataNO3$HH <- str_pad(dataNO3$HH, 2, c("left"), "0")    # str_pad: double to character
 dataNO3$Min <- str_pad(dataNO3$Min, 2, c("left"), "0")
 
 dataNO3 <- unite_(dataNO3, "time", c("HH", "Min"), sep = ":")
 dataNO3 <- unite_(dataNO3, "date", c("YYYY", "MM", "DD"), sep = "-")
 dataNO3 <- unite_(dataNO3, "datetime", c("date", "time" ), sep = " ")
 #dataNO3 <- select(dataNO3, datetime, NNO3mgl)
-dataNO3$datetime <- parse_date_time(dataNO3$datetime, order = "Ymd HM")
-zooNO3 <- read.zoo((data.frame(datetime = dataNO3$datetime, no3 = dataNO3$NNO3mgl)))
+dataNO3$datetime <- parse_date_time(dataNO3$datetime, order = "Ymd HM")    #parse_date_time: change time format
+zooNO3 <- read.zoo((data.frame(datetime = dataNO3$datetime, no3 = dataNO3$NNO3mgl)))     #ordered time series
 
 #pad hous and mins to to digits
 dataRad$HH <- str_pad(dataRad$HH, 2, c("left"), "0")
@@ -63,6 +63,13 @@ dataPrecip$datetime <- parse_date_time(dataPrecip$datetime, order = "Ymd HM")
 zooPrecip <- read.zoo((data.frame(datetime = dataPrecip$datetime, prec = dataPrecip$PrecipitationMM)))
 
 #start all series at the same time
+# > start(zooRad)
+# [1] "2014-09-16 12:00:00 UTC"
+# > start(zooNO3)
+# [1] "2014-05-14 10:00:00 UTC"
+# > start(zooPrecip)
+# [1] "2014-01-03 13:30:00 UTC"
+# zooRad starts the latest
 zooNO3 <- window(zooNO3, start = start(zooRad))
 zooPrecip <- window(zooPrecip, start = start(zooRad))
 #aggregate twelve hourly
@@ -78,11 +85,11 @@ tsAll <- na.trim(tsAll)
 
 ```
 
-# Überblick über die Variablen
+## Chirimachay_Netradiation
 ```{r inspect_data_length, echo = FALSE}
 summaryRad <- summarizeData(zooRad)
-summaryNO3 <- summarizeData(zooNO3)
-summaryPrecip <- summarizeData(zooPrecip, zero.as.nan = FALSE)
+summaryNO3 <- summarizeData(zooNO3)   #can't be used in Analysis for No3 because data are being trimed
+summaryPrecip <- summarizeData(zooPrecip, zero.as.nan = FALSE)    #can't be used in Analysis for Precip because data are being trimed
 ```
 
 Der Datensatz besteht aus einer Zeitreihe mit `r summaryRad$NumDatPoints` Werten
@@ -92,14 +99,14 @@ Minuten. Die Datenpunkte haben alle den `r summaryRad$Regulär` und es fehlen
 `r summaryRad$NumMissing` Datenpunkte. Das Minimum respektive das Maximum des
 Datensatzes liegen bei `r summaryRad$Min` sowie `r summaryRad$Max`.
 
-```{r inspect_data_2, echo = FALSE, htmlcap = figNum("Visuelle Inspektion des Datensatzes")}
+```{r inspect_data_2, echo = FALSE, fig.cap = figNum("Visuelle Inspektion des Datensatzes")}
 #check stationaritry with dickey fuller (package: tseries)
 adf.test(zooRad, k = 0)
 
 plot(zooRad, xlab = "Zeit", ylab = "Netto Strahlung")
 ```
 
-```{r difference_plot, echo = FALSE, htmlcap = figNum("Differenz des Datensatzes")}
+```{r difference_plot, echo = FALSE, fig.cap = figNum("Differenz des Datensatzes")}
 #calculate difference
 zooraddiff <- diff(zooRad)
 plot(zooraddiff, xlab = "Zeit", ylab = "Differenze netto Strahlung")
@@ -110,7 +117,7 @@ im Datensatz gibt. Darüber hinaus handelt es sich um eine Flächenhafte Messgr�
 weshalb sich aller Wahrscheinlichkeit nach eine Wurzeltransformation der Daten
 vorteilhaft erweisen könnte.
 
-```{r sqrt, echo = FALSE}
+```{r sqrt, echo = FALSE,fig.cap = figNum("Mit Wulzel transformierte Daten")}
 sqrtzooRad <- sqrt(zooRad)
 overviewPlot(coredata(sqrtzooRad))
 ```
@@ -120,12 +127,14 @@ Normalverteilt ist und einige Extreme Werte enthalten. Weitere Analyse zeigt
 das die 6. Wurzel der Daten zumindest die extremen Werte einfängt. Weiterhin
 zeigt sich das die Daten bimodal verteilt sind.
 
-```{r sixth_root, echo = FALSE}
+```{r sixth_root, echo = FALSE,fig.cap = figNum("Mit 6-te Wulzel transformierte Daten")}
 sixthroot <- zooRad^(1/6)
 overviewPlot(coredata(sixthroot))
 ```
 
-```{r GMM_Benj, echo = FALSE}
+***
+###GMM
+```{r GMM_Benj, echo = FALSE, fig.cap = figNum("GMM für mit 6-te Wulzel transformierte Daten, 2 Gauss")}
 #GMMRad <- AdaptGauss(coredata(sixthroot))
 GMMRadMeans <- c(1.34643, 2.14992)
 GMMRadSDs <- c(0.205605, 0.404244)
@@ -134,7 +143,7 @@ GMMRadParRadius <- 0.0989202
 GMMRadRMS <- 0.1106062
 GMMRadBayBound <- 1.679349
 
-PlotMixturesAndBoundaries(coredata(sixthroot), GMMRadMeans, GMMRadSDs, GMMRadWeights, SingleGausses = TRUE)
+PlotMixturesAndBoundaries(coredata(sixthroot), GMMRadMeans, GMMRadSDs, GMMRadWeights, SingleGausses = TRUE, lwd=3)
 ```
 
 Der erste Eindruck des Gauß-Mixturen Modells suggeriert das die 6. Wurzel aus dem
@@ -143,13 +152,19 @@ sowie ein nachfolgend ausgeführter Chi-Quadrat Test zeigen das die Daten nicht 
 Verteilung des Modells entsprechen. Insbesondere an den Enden der Modellverteilung
 sowie in der Mitte weichen die Daten deutlich ab.
 
-```{r QQ_GMM_Benj, echo = FALSE}
+```{r QQ_GMM_Benj, echo = FALSE,fig.cap = figNum("GMM Verifizierung, QQplot gegen Normalverteilung")}
 QQplotGMM(coredata(sixthroot), GMMRadMeans, GMMRadSDs, GMMRadWeights)
 
 #sixthrootKS <- KStestMixtures(coredata(sixthroot), GMMRadMeans, GMMRadSDs, GMMRadWeights)
-sixthrootChis <- Chi2testMixtures(coredata(sixthroot), GMMRadMeans, GMMRadSDs, GMMRadWeights)
+#sixthrootChis <- Chi2testMixtures(coredata(sixthroot), GMMRadMeans, GMMRadSDs, GMMRadWeights)
 ```
 
+```{r Chi_test_GMM_Benj, echo = FALSE,fig.cap = figNum("GMM Verifizierung, Chi-Quadrat-Test")}
+#sixthrootKS <- KStestMixtures(coredata(sixthroot), GMMRadMeans, GMMRadSDs, GMMRadWeights)
+sixthrootChis <- Chi2testMixtures(coredata(sixthroot), GMMRadMeans, GMMRadSDs, GMMRadWeights,PlotIt = T)
+```
+
+***
 ```{r FFT_Benj, echo = FALSE, eval = eval_block}
 specsixthroot <- spectrum(sixthroot, spans = c(3,9))
 
@@ -162,7 +177,7 @@ Nf <- length(coredata(sixthroot))/2
 sixthrootFFT <- fft(coredata(sixthroot))/length(coredata(sixthroot))
 plot(Mod(sixthrootFFT[2:4000]), type = "l", xlab = "Frequenz (Hz)")
 
-sixthrootFFT2 <- ifft(coredata(sixthroot))/length(coredata(sixthroot))
+sixthrootFFT2 <- ifft(coredata(sixthroot))/length(coredata(sixthroot)) #Pakete: pracma
 plot(Mod(sixthrootFFT2[2:300]), type = "l", xlab = "Frequenz (Hz)")
 ```
 
