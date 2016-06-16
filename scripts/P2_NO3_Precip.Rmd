@@ -153,11 +153,11 @@ Die erste Erträge sowie die letzten Erträge der Variable NO3 sehen wie folgt a
 printData(Data)
 ```
 
-Es sind insgesamt 22695 Werte jede 30 Minuten von 10 Uhr, 14.5.2014 bis 5 Uhr, 30.8.2015 gemessen worden.
-Die Zeitreihe verläuft steitg, vorbei einige Fehlstellen durch Intepolation ersetzt werden kann,
-da es gibt Sprungen zwischen Zeitpunkten zu beobachten hat. Die Zeitreihe ist nicht stationär, auch
-hetroskedastisch, daher ist die auch kein weißes Rauschen. Für die Verteilung der zeitunabhängige
-Beobachtungswerte „NNO3mgl“ wirde folgende Histogramm, PDE plot, QQ-plot gegen Normalverteilung,
+Es sind insgesamt 22695 Werte, welche alle 30 Minuten von 10 Uhr (14.5.2014) bis 5 Uhr (30.8.2015) gemessen wurden.
+Die Zeitreihe verläuft stetig, wobei einige Fehlstellen wahrscheinlich durch Interpolation ersetzt wurden,
+da man einige Sprünge zwischen Zeitpunkten beobachten kann. Die Zeitreihe ist nicht stationär und auch nicht
+heteroskedastisch, weshalb man annehmen kann, dass es sich nicht um weißes Rauschen handelt. Für die Verteilung der zeitunabhängigen
+Beobachtungswerte „NNO3mgl“ wurden Histogramm, PDE plot, QQ-plot gegen Normalverteilung,
 Boxplot sowie das Barplot für NaNs ausgegeben.
 ```{r overview, echo = FALSE, fig.cap = figNum("Ueberblick von Zeitreihe NO3")}
 # Ueberblick von Zeitreihe
@@ -180,11 +180,9 @@ abline(v = min(indy), col = c("red"),  lwd = 3)
 overviewPlot(Data[, 1], Header[1])
 ```
 
- - Keine NaNs, Es gibt ganz vielen Nullen. → NaNs durch Nullen eingesetzt.
- - Wertbereich sehr klein.
- - Nicht normalverteilt. 
+Der Datensatz erhält keine NaNs, jedoch relativ viele Nullen. Deshalb vermuten wir, dass Messfehler oder -lücken durch Nullen ersetzt wurden. Der Wertebereich der Daten ist sehr klein. Die Daten sind nicht normalverteilt.
 
-Versuche jetzt die Nullen wegzunehmen.
+Wir betrachten den Datensatz jetzt noch einmal ohne die Nullen.
 ```{r inspect var ohne null, echo = FALSE, fig.cap = figNum("Visuelle Inspektion NO3 ohne Nullen")}
 # Eliminierung der Nullen  
 ohneNull <- Data[, 1][Data[, 1] != 0]
@@ -192,17 +190,17 @@ ohneNull <- Data[, 1][Data[, 1] != 0]
 overviewPlot(ohneNull, paste(Header[1], "ohne Null"))
 ```
 
- - nach Eliminierung der Nullen ist es deutlich, dass es sich um einen Wachstum handelt. -> logaritmieren?
- - Wertbereich sehr klein → prozentuierung
+Nach Eliminierung der Nullen ist es deutlich, dass es sich um Wachstum handelt. -> logaritmieren?
+Aufgrund des kleinen Wertebereiches multiplizieren wir die Daten mit dem Faktor 100. Außerdem werden die Daten logarithmiert.
 
-Nach mehrfach Durfühung der Box-cox Transformation hat Faktor 0,5 als Empfehlung erhalten:
+Nach mehrfacher Durchführung der Box-Cox Transformation erhielten wir Lambda = 0,5, weshalb wir die Wurzel von den Daten gezogen haben.
 ```{r boxcoxTras, echo = FALSE,warning=FALSE, fig.cap = figNum("Eine der Ergebnissse bei Box-Cox Power Transformation")}
 # Transformieren Daten, um Normalverteilung zu annaehren
 #### aus welchem Paket ist boxcoxTrans??? dbt.Transforms
 boxcoxTrans(ohneNull[sample(1:length(ohneNull), 5000)])
 ```
 
-Betrachte daher die Transformation (Wurzel(Daten)*100):
+Die Wurzel-Transformation (Wurzel(Daten)*100):
 ```{r inspect var trafo 2, echo = FALSE,fig.cap = figNum("Visuelle Inspektion transformierte NO3 ohne Nullen")}
 #transNO3 <- slog(ohneNull)*100
 #transNO3 <- slog(1/ohneNull)
@@ -210,9 +208,8 @@ transNO3 <- (sqrt(ohneNull) * 100)
 overviewPlot(transNO3, paste("Transformierte", Header[1]))
 ```
 
- - 	Die Approximation in der Mitte sehr gut, bei kleiner Werte ist Approximation sehr schlecht.
-    Muss erneut angepasst werden.
- -  Gaussian Mixture Modell
+Bei kleineren Werten bietet die Approximationen keine guten Werte, weshalb wir ein Gaussian Mixture Modell anwenden.
+
 
 ***   
 ### GMM
