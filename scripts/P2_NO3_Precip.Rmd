@@ -60,8 +60,11 @@ cache_erg <- FALSE
 # Funktion, um die erste bzw.letzte 10 Ertraege zu sehen
 printData <- function(data){
   print("Erste bzw. letzte 10 Werte des Datensatzes")
-  head(data,n=10)
-  tail(data, n = 10)
+  #head(data,n=10)
+  #tail(data, n = 10)
+  print(data[1:10,])
+  temp=nrow(data)
+  print(data[(temp-10):temp,])
 }
 
 # Histogram,PDEplot,QQplot,Boxplot,NaN Anzahl
@@ -86,7 +89,8 @@ overviewPlot <- function(data, name = "data"){
   
   # QQplot
   qqnorm(data, ylab = name)
-  gridOn() 
+  gridOn()
+  qqline(data, col="blue",lwd=3)
   
   # Boxplot
   boxplot(data, xlab=name, main = paste("Range:[ ", num2str(round(MinD, 5)), " ,", num2str(round(MaxD, 5)) ," ]"), axes = FALSE)
@@ -146,7 +150,7 @@ Zuerst untersuchen wir den Datensatz „Chirimachay_NO3.lrn“.
 Die erste Erträge sowie die letzten Erträge der Variable NO3 sehen wie folgt aus:
 ```{r inspect vars, echo = FALSE}
 # Messungsfrequenz
-printData(NO3$Data)
+printData(Data)
 ```
 
 Es sind insgesamt 22695 Werte jede 30 Minuten von 10 Uhr, 14.5.2014 bis 5 Uhr, 30.8.2015 gemessen worden.
