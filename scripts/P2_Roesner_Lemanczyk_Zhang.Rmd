@@ -143,95 +143,95 @@ overviewPlot <- function(data, name = "data"){
 }
 
 #modified adapt gauss function without active input through shiny app
-getOptGauss <- function(Data, Kernels = ParetoDensityEstimation(Data, paretoRadius = ParetoRadius(Data))$kernels, ParetoDensity = ParetoDensityEstimation(Data, paretoRadius = ParetoRadius(Data))$paretoDensity, fast = TRUE){ 
-    # Teste RMS fuer einen Gauss
-    Mean1 <- mean(Data)
-    Deviation1 <- sd(Data)
-    Weight1 <- 1
-    Var=EMGauss(Data,fast=fast)
-    Mean1 <- Var$Means
-    Deviation1 <- Var$SDs
-    Weight1 <- Var$Weights
-    Fi <- dnorm(Kernels,Mean1,Deviation1)*Weight1
-    RMS1 <- sqrt(sum((Fi-ParetoDensity)^2))
-    
-    # Teste RMS fuer 2 Gauss
-    Means2 <- c(0,0)
-    Deviations2 <- c(0,0)
-    Weights2 <- c(0,0)
-    Valskmeans <- kmeans(Data,2,iter.max=100)
-    KValues <- Valskmeans$cluster
-    #print(KValues2)
-    for (i in 1:2){
-      Means2[i] <- mean(Data[KValues==i])
-      Deviations2[i] <- sd(Data[KValues==i])
-      Weights2[i] <- sum(KValues==i)
-      if (is.na(Deviations2[i])) {Deviations2[i] <- 0}
-    }
-    Weights2 <- Weights2/length(KValues)
-    Var=EMGauss(Data,Means2,Deviations2,Weights2,10,fast=fast)
-    Means2 <- Var$Means
-    Deviations2 <- Var$SDs
-    Weights2 <- Var$Weights
-    Fi <- 0
-    for (i in 1:2){
-      Fi <- Fi+dnorm(Kernels,Means2[i],Deviations2[i])*Weights2[i]
-    }
-    RMS2 <- sqrt(sum((Fi-ParetoDensity)^2))
-    
-    # Teste RMS fuer 3 Gauss
-    Means3 <- c(0,0,0)
-    Deviations3 <- c(0,0,0)
-    Weights3 <- c(0,0,0)
-    Valskmeans <- kmeans(Data,3,iter.max=100)
-    KValues <- Valskmeans$cluster
-    #print(KValues2)
-    for (i in 1:3){
-      Means3[i] <- mean(Data[KValues==i])
-      Deviations3[i] <- sd(Data[KValues==i])
-      Weights3[i] <- sum(KValues==i)
-      if (is.na(Deviations3[i])) {Deviations3[i] <- 0}
-    }
-    Weights3 <- Weights3/length(KValues)
-    Var=EMGauss(Data,Means3,Deviations3,Weights3,10,fast=fast)
-    Means3 <- Var$Means
-    Deviations3 <- Var$SDs
-    Weights3 <- Var$Weights
-    Fi <- 0
-    for (i in 1:3){
-      Fi <- Fi+dnorm(Kernels,Means3[i],Deviations3[i])*Weights3[i]
-    }
-    RMS3 <- sqrt(sum((Fi-ParetoDensity)^2))
-    
-    # ueberpruefe ob RMS1( 1 Gauss) oder RMS2 (3 Gauss ) kleiner ist. Speichere zugehoerige means, deviations und weights
-    SSE <- c(RMS1^2*log(3), RMS2^2*log(3*2), RMS3^2*log(3*3))
-    #SSE <- c(RMS1^2*log(3), RMS2^2*log(3*2))
-    minSSEind <- which.min(SSE)
-    switch(as.character(minSSEind),
-           "1" = {means <- Mean1
-                deviations <- Deviation1
-                weights <- Weight1
-                rms <- RMS1},
-           "2" = {means <- Means2
-                deviations <- Deviations2
-                weights <- Weights2
-                rms <- RMS2},
-           "3" = {means <- Means3
-                deviations <- Deviations3
-                weights <- Weights3
-                rms <- RMS3}
-           )
-    # Ordne gaussians nach mean
-    order <- order(means)
-    means <- means[order]
-    deviations <- deviations[order]
-    weights <- weights[order]
-    rms <- rms
-    out=list(means=means,deviations=deviations,weights=weights, rms = rms)
-    
-    
-    return(out)
-  }
+# getOptGauss <- function(Data, Kernels = ParetoDensityEstimation(Data, paretoRadius = ParetoRadius(Data))$kernels, ParetoDensity = ParetoDensityEstimation(Data, paretoRadius = ParetoRadius(Data))$paretoDensity, fast = TRUE){ 
+#     # Teste RMS fuer einen Gauss
+#     Mean1 <- mean(Data)
+#     Deviation1 <- sd(Data)
+#     Weight1 <- 1
+#     Var=EMGauss(Data,fast=fast)
+#     Mean1 <- Var$Means
+#     Deviation1 <- Var$SDs
+#     Weight1 <- Var$Weights
+#     Fi <- dnorm(Kernels,Mean1,Deviation1)*Weight1
+#     RMS1 <- sqrt(sum((Fi-ParetoDensity)^2))
+#     
+#     # Teste RMS fuer 2 Gauss
+#     Means2 <- c(0,0)
+#     Deviations2 <- c(0,0)
+#     Weights2 <- c(0,0)
+#     Valskmeans <- kmeans(Data,2,iter.max=100)
+#     KValues <- Valskmeans$cluster
+#     #print(KValues2)
+#     for (i in 1:2){
+#       Means2[i] <- mean(Data[KValues==i])
+#       Deviations2[i] <- sd(Data[KValues==i])
+#       Weights2[i] <- sum(KValues==i)
+#       if (is.na(Deviations2[i])) {Deviations2[i] <- 0}
+#     }
+#     Weights2 <- Weights2/length(KValues)
+#     Var=EMGauss(Data,Means2,Deviations2,Weights2,10,fast=fast)
+#     Means2 <- Var$Means
+#     Deviations2 <- Var$SDs
+#     Weights2 <- Var$Weights
+#     Fi <- 0
+#     for (i in 1:2){
+#       Fi <- Fi+dnorm(Kernels,Means2[i],Deviations2[i])*Weights2[i]
+#     }
+#     RMS2 <- sqrt(sum((Fi-ParetoDensity)^2))
+#     
+#     # Teste RMS fuer 3 Gauss
+#     Means3 <- c(0,0,0)
+#     Deviations3 <- c(0,0,0)
+#     Weights3 <- c(0,0,0)
+#     Valskmeans <- kmeans(Data,3,iter.max=100)
+#     KValues <- Valskmeans$cluster
+#     #print(KValues2)
+#     for (i in 1:3){
+#       Means3[i] <- mean(Data[KValues==i])
+#       Deviations3[i] <- sd(Data[KValues==i])
+#       Weights3[i] <- sum(KValues==i)
+#       if (is.na(Deviations3[i])) {Deviations3[i] <- 0}
+#     }
+#     Weights3 <- Weights3/length(KValues)
+#     Var=EMGauss(Data,Means3,Deviations3,Weights3,10,fast=fast)
+#     Means3 <- Var$Means
+#     Deviations3 <- Var$SDs
+#     Weights3 <- Var$Weights
+#     Fi <- 0
+#     for (i in 1:3){
+#       Fi <- Fi+dnorm(Kernels,Means3[i],Deviations3[i])*Weights3[i]
+#     }
+#     RMS3 <- sqrt(sum((Fi-ParetoDensity)^2))
+#     
+#     # ueberpruefe ob RMS1( 1 Gauss) oder RMS2 (3 Gauss ) kleiner ist. Speichere zugehoerige means, deviations und weights
+#     SSE <- c(RMS1^2*log(3), RMS2^2*log(3*2), RMS3^2*log(3*3))
+#     #SSE <- c(RMS1^2*log(3), RMS2^2*log(3*2))
+#     minSSEind <- which.min(SSE)
+#     switch(as.character(minSSEind),
+#            "1" = {means <- Mean1
+#                 deviations <- Deviation1
+#                 weights <- Weight1
+#                 rms <- RMS1},
+#            "2" = {means <- Means2
+#                 deviations <- Deviations2
+#                 weights <- Weights2
+#                 rms <- RMS2},
+#            "3" = {means <- Means3
+#                 deviations <- Deviations3
+#                 weights <- Weights3
+#                 rms <- RMS3}
+#            )
+#     # Ordne gaussians nach mean
+#     order <- order(means)
+#     means <- means[order]
+#     deviations <- deviations[order]
+#     weights <- weights[order]
+#     rms <- rms
+#     out=list(means=means,deviations=deviations,weights=weights, rms = rms)
+#     
+#     
+#     return(out)
+#   }
 ```
 
 ```{r load_packages, echo=FALSE, error=FALSE, message=FALSE, include=FALSE}
@@ -239,6 +239,7 @@ getOptGauss <- function(Data, Kernels = ParetoDensityEstimation(Data, paretoRadi
 packages <- c('ABCanalysis','AdaptGauss','DataVisualisation','GabrielGraph','GabrielGraph','Umatrix','dbt.attributes','dbt.BDM','dbt.CART','ClassAnalysis','dbt.classifiers','dbt.ColorScale','dbt.ColorScale','DataIO','dbt.DelaunayVoronoi','Dist','dbt.Distances','dbt.DNAarrays','dbt.general','dbt.GraphAlgorithms','dbt.HESKES','dbt.IGCfiles','dbt.InteractiveTools','dbt.MixtureModel','dbt.nanHandling','dbt.NeuronalNets','pareto','dbt.Plot','dbt.Projections','dbt.RetroMAT','dbt.Statistics','reshape2','caTools','dbt.Transforms') #dbt Pakete
 packages = c(packages,"kfigr", "knitr") #Pakete für knit
 packages = c(packages,'FinTS','tseries') #Pakete für GARCH
+packages = c(packages,'plot3D') #Pakete für 3dplot
 
 packages <- c(packages, "tidyr", "dplyr", "lubridate", "zoo", "stringr", "timeSeries",  "car", "forecast", "dbt.RetroMAT", "RHmm",  "depmixS4",'pracma')  # from Benjamin
 
@@ -256,13 +257,77 @@ opts_knit$set(kfigr.prefix = TRUE)
 
 ```
 
+```{r load_data, echo = FALSE}
+files <- list.files("../data", pattern = "p2_", full.names = TRUE)
 
-```{r Jiachun NO3 Precip data, child = "P2_NO3_Precip.Rmd"}
+loadData(files, c("dataRad", "dataNO3", "dataPrecip"))
+
+#pad hous and mins to to digits
+dataNO3$HH <- str_pad(dataNO3$HH, 2, c("left"), "0")    # str_pad: double to character
+dataNO3$Min <- str_pad(dataNO3$Min, 2, c("left"), "0")
+
+dataNO3 <- unite_(dataNO3, "time", c("HH", "Min"), sep = ":")
+dataNO3 <- unite_(dataNO3, "date", c("YYYY", "MM", "DD"), sep = "-")
+dataNO3 <- unite_(dataNO3, "datetime", c("date", "time" ), sep = " ")
+#dataNO3 <- select(dataNO3, datetime, NNO3mgl)
+dataNO3$datetime <- parse_date_time(dataNO3$datetime, order = "Ymd HM")    #parse_date_time: change time format
+zooNO3 <- read.zoo((data.frame(datetime = dataNO3$datetime, no3 = dataNO3$NNO3mgl)))     #ordered time series
+
+#pad hous and mins to to digits
+dataRad$HH <- str_pad(dataRad$HH, 2, c("left"), "0")
+dataRad$Min <- str_pad(dataRad$Min, 2, c("left"), "0")
+
+dataRad <- unite_(dataRad, "time", c("HH", "Min"), sep = ":")
+dataRad <- unite_(dataRad, "date", c("YYYY", "MM", "DD"), sep = "-")
+dataRad <- unite_(dataRad, "datetime", c("date", "time" ), sep = " ")
+#dataRad <- select(dataRad, datetime, CorrectedNetRadiationWm2)
+dataRad$datetime <- parse_date_time(dataRad$datetime, order = "Ymd HM")
+zooRad <- read.zoo((data.frame(datetime = dataRad$datetime, rad = dataRad$CorrectedNetRadiationWm2)))
+
+#pad hous and mins to to digits
+dataPrecip$HH <- str_pad(dataPrecip$HH, 2, c("left"), "0")
+dataPrecip$Min <- str_pad(dataPrecip$Min, 2, c("left"), "0")
+
+#pad years in Precipiation data to full years
+dataPrecip$YYYY <- str_pad(dataPrecip$YYYY, 3, c("left"), "0")
+dataPrecip$YYYY <- str_pad(dataPrecip$YYYY, 4, c("left"), "2")
+
+dataPrecip <- unite_(dataPrecip, "time", c("HH", "Min"), sep = ":")
+dataPrecip <- unite_(dataPrecip, "date", c("YYYY", "MM", "DD"), sep = "-")
+dataPrecip <- unite_(dataPrecip, "datetime", c("date", "time" ), sep = " ")
+#dataPrecip <- select(dataPrecip, datetime, PrecipitationMM)
+dataPrecip$datetime <- parse_date_time(dataPrecip$datetime, order = "Ymd HM")
+zooPrecip <- read.zoo((data.frame(datetime = dataPrecip$datetime, prec = dataPrecip$PrecipitationMM)))
+
+#start all series at the same time
+# > start(zooRad)
+# [1] "2014-09-16 12:00:00 UTC"
+# > start(zooNO3)
+# [1] "2014-05-14 10:00:00 UTC"
+# > start(zooPrecip)
+# [1] "2014-01-03 13:30:00 UTC"
+# zooRad starts the latest
+zooNO3 <- window(zooNO3, start = start(zooRad))
+zooPrecip <- window(zooPrecip, start = start(zooRad))
+#aggregate twelve hourly
+aggPrecip <- aggregate(zooPrecip, time(zooPrecip) - as.numeric(time(zooPrecip)) %% (12*60*60), sum)
+#set timezone variable else time zone will be lost while merging zoo objects
+Sys.setenv(TZ="UTC")
+agg2 <- merge.zoo(zooRad, zooNO3)
+agg2 <- aggregate(agg2, time(agg2) - as.numeric(time(agg2)) %% (12*60*60), mean)
+#merge timeseries
+tsAll <- merge.zoo(agg2, aggPrecip)
+#trim leading and trailing nan values
+tsAll <- na.trim(tsAll)
+
 ```
 
+```{r Jiachun NO3 Precip data, child = "P2_NO3_Precip.Rmd"}              
+```
+<!-- , eval=eval_block -->
 ```{r Benjamin_Radiation_data, child = "P2_Rediation.Rmd"}
 ```
 
 
-```{r Corvarianzanalysis, child = "P2_Corvarianzanalysis",eval=eval_block}
+```{r Corvarianzanalysis, child = "P2_Corvarianzanalysis.Rmd"}
 ```

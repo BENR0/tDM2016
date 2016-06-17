@@ -124,7 +124,7 @@ opts_knit$set(kfigr.prefix = TRUE)
 
 ```{r load, echo = FALSE}
 
-FileName <- c("p2_Chirimachay_NO3","p2_Chirimachay_Netradiation.lrn","p2_Chirimachay_Precip.lrn")
+FileName <- c("p2_Chirimachay_NO3.lrn","p2_Chirimachay_Netradiation.lrn","p2_Chirimachay_Precip.lrn")
 #FileName <-c('P2_Chirimachay_NO3','Chirimachay_Netradiation.lrn','Chirimachay_Precip.lrn')
 
 ## Pfad bitte hier anpassen!!!
@@ -155,11 +155,9 @@ printData(Data)
 
 Es sind insgesamt 22695 Werte, welche alle 30 Minuten von 10 Uhr (14.5.2014) bis 5 Uhr (30.8.2015) gemessen wurden.
 Die Zeitreihe verläuft stetig, wobei einige Fehlstellen wahrscheinlich durch Interpolation ersetzt wurden,
-da man einige Sprünge zwischen Zeitpunkten beobachten kann. Die Zeitreihe ist nicht stationär und auch nicht
-heteroskedastisch, weshalb man annehmen kann, dass es sich nicht um weißes Rauschen handelt. Für die Verteilung der zeitunabhängigen
-Beobachtungswerte „NNO3mgl“ wurden Histogramm, PDE plot, QQ-plot gegen Normalverteilung,
-Boxplot sowie das Barplot für NaNs ausgegeben.
-```{r overview, echo = FALSE, fig.cap = figNum("Ueberblick der Zeitreihe NO3")}
+da man einige Sprünge zwischen Zeitpunkten beobachten kann. Die Zeitreihe ist nicht stationär und heteroskedastisch, weshalb man annehmen kann, dass es sich nicht um weißes Rauschen handelt. 
+
+```{r overview, echo = FALSE, fig.cap = figNum("Überblick der Zeitreihe NO3")}
 # Ueberblick von Zeitreihe
 year <- Data[,3]
 indy <- which(year == 2015, arr.ind = T)
@@ -168,6 +166,9 @@ plot(Data[, 1], type="l", ylab = "NO3", xlab = "Zeit", col = "blue")
 abline(v = min(indy), col = c("red"),  lwd = 3)
 ```
 
+Für die Verteilung der zeitunabhängigen
+Beobachtungswerte „NNO3mgl“ wurden Histogramm, PDE plot, QQ-plot gegen Normalverteilung,
+Boxplot sowie das Barplot für NaNs ausgegeben.
 
 ```{r overview_Verteilung, echo = FALSE, fig.cap = figNum("Visuelle Inspektion NO3")}
 # Verteilungsbetrachtung
@@ -191,8 +192,8 @@ ohneNull <- Data[, 1][Data[, 1] != 0]
 overviewPlot(ohneNull, paste(Header[1], "ohne Null"))
 ```
 
-Nach Eliminierung der Nullen ist es deutlich, dass es sich um Wachstum handelt. -> logaritmieren?
-Aufgrund des kleinen Wertebereiches multiplizieren wir die Daten mit dem Faktor 100. Außerdem werden die Daten logarithmiert.
+Nach Eliminierung der Nullen ist es deutlich, dass es sich um Wachstum handelt.
+Aufgrund des kleinen Wertebereiches multiplizieren wir die Daten mit dem Faktor 100.
 
 Nach mehrfacher Durchführung der Box-Cox Transformation erhielten wir Lambda = 0,5, weshalb wir die Wurzel von den Daten gezogen haben.
 
@@ -212,8 +213,7 @@ overviewPlot(transNO3, paste("Transformierte", Header[1]))
 ```
 
 Bei kleineren Werten bietet die Approximationen keine guten Werte, weshalb wir ein Gaussian Mixture Modell anwenden.
-
-***   
+***
 ### GMM
 ```{r GMM, echo = FALSE, eval = eval_block}
 temp <- AdaptGauss(transNO3)
@@ -226,12 +226,15 @@ dput(res1)
 ab <- Bayes4Mixtures(transNO3, Werte1$Means, Werte1$SDs, Werte1$Weights, PlotIt = T) 
 ```
 
+Wir passen die transformierte Daten mit 3 Gauss und verifizieren die Anpassung mit QQ-plot.
+
 ```{r GMM plot, echo = FALSE,fig.cap = figNum("GMM für tranformierte NO3 ohne Nullen, 3 Gauss")}
 Werte1 <- list(Means = c(7.029219, 17.786148, 29.106267), 
            SDs = c(5.08932, 4.50063, 5.69700), 
            Weights = c( 0.176, 0.348, 0.490))
 PlotMixturesAndBoundaries(transNO3, Werte1$Means, Werte1$SDs, Werte1$Weights,SingleGausses=T, lwd=3)
 ```
+
 
 ```{r gmm verification plot, echo = FALSE, fig.cap = figNum("QQplot zur Verifizierung, Daten gegen GMM")}
 #Verifizierung
@@ -242,14 +245,14 @@ QQplotGMM(transNO3, Werte1$Means, Werte1$SDs, Werte1$Weights)
 
 ```
 
-Die Anpassung sieht im QQ-Plot bis auf die Werte am Rand gut aus. Zur Verifizierung verwenden wir den Chi-Quadrat-Test.
+Die Anpassung sieht im QQ-Plot bis auf die Werte am Rand gut aus. Zur statistischen Verifizierung verwenden wir noch den Chi-Quadrat-Test.
 
-```{r gmm verification statistik test, echo = FALSE,fig.cap = figNum("Chi-Quadrat-Test. H0: Daten und GMM besitzen die gleiche Verteilung")}
+```{r gmm verification statistik test, echo = FALSE,fig.cap = figNum("Chi-Quadrat-Test. Nullhypothese: Daten und GMM besitzen die gleiche Verteilung")}
 
 abc <- Chi2testMixtures(transNO3, Werte1$Means, Werte1$SDs, Werte1$Weights, PlotIt = T)
 ```
 
-Der P-Value ist mit einem Wert von  groß, H0 wrid nicht abgeleht. Anpassung gut.
+Der $\beta$-Wert aus der Chi2testMixures Funktion liefert einen sehr kleinen Wert, daher ist der P-Value fast 1, $H_0$ wrid nicht abgeleht. Das Modell ist statistisch mit GMM gut angepasst.
 
 ***
 ### Clusterung der Daten
@@ -276,7 +279,7 @@ detach(NO3)
 
 ***
 ### ARCH/GARCH
-Wir betrachten die Differenzreihe, da die Zeitreihe stationär sein muss.
+An dieser Stelle versuchen wir noch den Datensatz mit ARCH/GARCH Modell anzupassen. Hierfür bilden wir zuerst die Differenzreihe, da die Zeitreihe stationär sein muss.
 ```{r Stationärität, echo = FALSE}
 data <- NO3$Data[,1]
 Differenz <- diff(data)
@@ -296,9 +299,9 @@ Hier wird der ARCH LM-Test verwendet und überprüft, ob es ARCH Effekte gibt.
 ArchTest(Differenz)
 ```
 
-Die Nullhypothese wird abgelehnt, da es einen ARCH Effekt gibt.
+Wegen des kleines P-Wert wird die Nullhypothese abgelehnt, d.h. es gibt einen ARCH Effekt.
 
-Die Parameter werden hier durch Ausprobieren bestimmt. Anschließendwird mit Hilfe des AIC-Kriteriums der beste Parameter bestimmt.
+Die Parameter werden hier durch Ausprobieren bestimmt. Anschließend wird mit Hilfe des AIC-Kriteriums der beste Parameter bestimmt.
 
 ```{r Arch/ Garch 2, echo = FALSE, message = FALSE, include = FALSE}
 gar1 <- garch(Differenz,order = c(1,0))
@@ -344,9 +347,8 @@ ob eine Normalverteilung vorliegt. Hier zeigt es sich, dass die Residuen nicht n
 **Den Vorlesungsunterlagen nach müssen die Residuen $\chi^2$ verteilt sein.**
 Die PDEplot zeigt keine $\chi^2$ Verteilung.
 
-Box-Ljung Test überprüft, ob innerhalb der Residuen eine Autokorrelation existiert. In den Residuen dieses Datensatzes ist keine Autokorrekation zu finden.
+Box-Ljung Test überprüft, ob innerhalb der Residuen eine Autokorrelation existiert. In den Residuen dieses Datensatzes ist eher keine Autokorrekation zu finden.
 Laut Skript sollen Residuen nicht autokorreliert sein, weshalb wie die GARCH(1,1) Anpassung als gut einstufen.
-
 
 
 ## Chirimachay_Precip
@@ -360,10 +362,12 @@ printData(Data)
 
 ```
 
-Es sind insgesamt `r length(Data[,1])` Werte, die wie bei unserem vorherigen Datensatz NN03 alle 30 Minuten von 13:30 Uhr (3.1.2014) bis 8 Uhr (14.12.2015) gemessen worden sind.
+Es sind insgesamt `r length(Data[,1])` Werte, die wie bei unserem vorherigen Datensatz N03 alle 30 Minuten von 13:30 Uhr (3.1.2014) bis 8 Uhr (14.12.2015) gemessen worden sind.
 Ein Großteil der Daten haben entweder einen Wert von 0 oder 0,1. Genauer gesagt ist `r round(length(Data[,1][Data[,1]==0])/length(Data[,1])*100)`% der Daten 0 und `r round(length(Data[,1][Data[,1]==0.1])/length(Data[,1])*100)`% der Daten haben den Wert 0,1.
 
-```{r overview_Precip, echo = FALSE, fig.cap = figNum("Ueberblick der Zeitreihe Precipitation")}
+Die Zeitreihe ist außerdem nicht stetig, es gibt keine Werte zwischen 0 und 0,1. Die Zeitreihe ist nicht stationär, heteroskedastisch, daher auch kein weißes Rauschen.
+
+```{r overview_Precip, echo = FALSE, fig.cap = figNum("Überblick der Zeitreihe Precipitation")}
 
 # Ueberblick von Zeitreihe
 year <- Data[,3]
@@ -387,7 +391,7 @@ overviewPlot(Data[, 1], Header[1])
 
 Auch dieser Datensatz entält keine NaNs, jedoch viele Nullen und Werte von 0,1. Der Wertebereich ist klein.
 
-Wir haben die Nullen und die 0,1 Werte als seperate Gruppen aus dem Datensatz genommen und betrachten nun die restlichen Daten.
+Wir haben die Nullen und die 0,1 Werte als seperate Gruppen aus dem Datensatz genommen und betrachten nun die restlichen Daten. Beachte hier, dass der Stichprobumfang der restlichen Daten sehr klein ist, die Verteilung von nur 366 Daten wird untersucht.
 
 ```{r inspect var ohne null_Precip, echo = FALSE, fig.cap = figNum("Visuelle Inspektion Precipitation ohne 0,0 und 0,1. Transformierte Precipitation")}
 # Eliminierung der Nullen und extrem kleinen Werten 
@@ -397,7 +401,7 @@ ohneNullklein <- ohneNull[ohneNull!= 0.1]
 overviewPlot(ohneNullklein, paste(Header[1], "ohne 0,0 und 0,1"))
 ```
 
-Die restlichen Daten sind weiterhin nicht normalverteilt, weshalb wir die Daten transformieren. Da der Wertebereich sehr klein ist, werden auch diese Daten mit einem Faktor multipliziert.
+Die restlichen Daten sind weiterhin nicht normalverteilt, weshalb wir die Daten transformieren.
 
 Nach mehrfacher Durchführung der Box-Cox-Transformation erhielten wir ein Lambda = -3,5. Nach Tukeys Ladder of Power entscheiden wir uns daher die Daten mit -3 zu potenzieren.
 
@@ -407,7 +411,7 @@ Nach mehrfacher Durchführung der Box-Cox-Transformation erhielten wir ein Lambd
 boxcoxTrans(ohneNullklein)
 ```
 
-Transformatierte Daten^(-3)
+Transformatierte Daten (Daten^(-3)):
 
 ```{r inspect var trafo 2_Precip, echo = FALSE,fig.cap = figNum("Visuelle Inspektion transformierter Precipitation Daten ohne 0,0 und 0,1.")}
 
@@ -431,11 +435,13 @@ dput(res2)
 ab <- Bayes4Mixtures(transPrec, Werte2$Means, Werte2$SDs, Werte2$Weights, PlotIt = T) 
 ```
 
-```{r GMM plot_Precip, echo = FALSE,fig.cap = figNum("GMM für tranformierte Precipitation Daten ohne 0,0 und 0,1, 3 Gauss"),eval = eval_block}
+Wir passen die transformierte Daten mit 3 Gauss.
+
+```{r GMM plot_Precip, echo = FALSE,fig.cap = figNum("GMM für tranformierte Precipitation Daten ohne 0,0 und 0,1, 3 Gauss")}
 Werte2 <- list(Means = c(126.0190, 429.6519, 712.7960), 
            SDs = c(121.8712, 122.5664, 135.4684), 
            Weights = c( 0.343, 0.224, 0.553))
-PlotMixturesAndBoundaries(transNO3, Werte1$Means, Werte1$SDs, Werte1$Weights,SingleGausses=T, lwd=3)
+PlotMixturesAndBoundaries(transPrec, Werte2$Means, Werte2$SDs, Werte2$Weights,SingleGausses=T, lwd=3)
 ```
 
 ```{r gmm verification plot_Precip, echo = FALSE, fig.cap = figNum("QQplot zur Verifizierung, Daten gegen GMM")}
@@ -454,7 +460,7 @@ Die Anpassung siegt auf den ersten Blick gut aus. Wir führen noch eine statisti
 abc <- Chi2testMixtures(transPrec, Werte2$Means, Werte2$SDs, Werte2$Weights, PlotIt = T)
 ```
 
-P-Wert ist sehr groß. Da der Stichprobenumfang sehr klein ist,`r length(transPrec)` wird $H_0$ nicht abgelehnt und wir nehmen die Anpassung an.
+P-Wert ist etwa 0.79, da der Stichprobenumfang(`r length(transPrec)`) sehr klein ist, wird $H_0$ nicht abgelehnt und wir nehmen die Anpassung gut an.
 
 ***
 ### Clusterung der Daten

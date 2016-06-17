@@ -1,1 +1,134 @@
+
+<!-- Aufgabe 3, Korvarianzanalysis -->
+
 # Beschreiben Sie den Wissensgewinn durch diese Modelle. Wie und wodurch wird NO3 beeinflusst?
+## Originale Daten
+Wir bearbeiten zuerst die Datensatz „Chirimachay_NO3.lrn“ , „Chirimachay_Netradiation.lrn“ und „Chirimachay_Precip.lrn“, so dass die Messgröße innerhalb 12 Stunden sich aggregiert werden, dann schneiden wir die Zeitreihen, so dass nur die Daten in der Zeitpunkte, wo alle drei Daten vorhand sind, aufgenommen werden. Wir schaffen einen Überblick der Zusammenhang der Daten mit einem Plot.
+
+```{r 3plot_orig, echo=FALSE, fig.cap = figNum("Überblick alle 3 Zeitreihen, Daten nach Zeit geordnet, aggregiert sich innerhalb 12 Stunden")}
+dataNO3=coredata(tsAll[,'zooNO3'])
+dataNetra=coredata(tsAll[,'zooRad'])
+dataPrec=coredata(tsAll[,'aggPrecip'])
+
+# library(rgl)
+# plot3d(dataNO3,dataNetra,dataPrec)
+#library(plot3D)
+# scatter3D(dataNO3,dataNetra,dataPrec)
+
+# maxD=max(c(dataNO3,dataNetra,dataPrec))
+# minD=min(c(dataNO3,dataNetra,dataPrec))
+
+par(mfrow=c(3,1))
+plot(tsAll[,'zooRad'],ylab='Netradiation')
+plot(tsAll[,'zooNO3'],ylab='NO3',col='blue')
+plot(tsAll[,'aggPrecip'],ylab='Precip')
+par(mfrow=c(1,1))
+
+```
+
+Außerdem plotten wir jeweils zwei Daten gegeneinander.
+
+```{r pairplot_orig, echo=FALSE, fig.cap = figNum("Scatterplot jeweilige Datensatz, Daten aggregiert sich innerhalb 12 Stunden")}
+pairs(cbind(dataNO3,dataNetra,dataPrec))
+
+```
+
+Hier sieht man aus erste Blick keine Lineare Zusammenhang zwischen jeweilige Daten. Daher rechnen wir die Kovarianzmatrizen mit unterschiedliche Verfahren.
+
+  - Pearsonschen Korrelationskoeffizienten misst die Korrelation zwischen zwei normalverteilten Merkmalen, mit Werte nahe bei 0 zeigt die keine lineare Zusammenhang.
+  
+  - Spearmanschen Rangkorrelationskoeffizienten ist ein nichtparametrischen statistischen Verfahren, beruhen auf der Vergabe von Rängen, kann daher auch eine nichtlineare Zusammenhang verweisen.
+  
+  - Kendalls Tau berechnet die Differenz zwischen der Wahrscheinlichkeit, dass die beobachteten Daten für beide Variablen in derselben Rangfolge vorliegen und der Wahrscheinlichkeit, dass die Daten für die beiden Variablen verschiedene Rangfolgen besitzen.
+
+Wir führe gleichzeitig noch statistische Tests für jeweilige Verfahren aus.
+```{r cor_orig, echo=FALSE, error=FALSE, message=FALSE,warning=FALSE,fig.cap = figNum("Korvarianzanalysis, Originale Daten")}
+#Packet: dbt.Plot
+PlotPixMatrix(cor(cbind(dataNO3,dataNetra,dataPrec),method='pearson'), main = 'Korvarianzmatrix nach pearson')
+cor.test(dataNO3,dataNetra,method='pearson')
+cor.test(dataNO3,dataPrec,method='pearson')
+PlotPixMatrix(cor(cbind(dataNO3,dataNetra,dataPrec),method='kendall'), main = 'Korvarianzmatrix nach kendall')
+cor.test(dataNO3,dataNetra,method='kendall')
+cor.test(dataNO3,dataPrec,method='kendall')
+PlotPixMatrix(cor(cbind(dataNO3,dataNetra,dataPrec),method='spearman'), main = 'Korvarianzmatrix nach spearman')
+cor.test(dataNO3,dataNetra,method='spearman')
+cor.test(dataNO3,dataPrec,method='spearman')
+```
+
+Hier sieht man keine deutliche lineare oder nichtlineare Zusammenhang zwischen jeweilige Variablen, trotzdem werden alle Nullhyphotese: true correlation/tau/rho ist gleich 0 mit höhe Signifikanz abgelehnt. D.h. Netradiation und Precip haben nur sehr kleinen Einfluss auf NO3. 
+
+***
+
+## Transformierte Daten
+Daher betrachen wir noch die Transformierte Daten. Laut Box-cox-Transformation und Chain-Ladder-Verfahren werden die Daten wie folgende transformiert.
+
+  - NO3: sqrt(Daten)
+  
+  - Netradiation: log(Daten)
+  
+  - Precip: log(Daten +1), um Logrithmieren der Nullen zu vermeiden.
+
+Wir schaffen wie vorher einen Überblick der transformierte Zeitreihen, dann plotten wir jeweils zwei transformierte Daten gegeneinander.
+```{r 3dplot_trans, echo=FALSE, fig.cap = figNum("Überblick alle 3 Zeitreihen, transformierte Daten aggregiert sich innerhalb 12 Stunden")}
+# overviewPlot(dataNO3)
+# boxcoxTrans(dataNO3)
+transNO3 <- (sqrt(dataNO3))
+# overviewPlot(transNO3)
+
+# overviewPlot(dataNetra)
+# boxcoxTrans(dataNetra)
+transNetra <- (log(dataNetra))
+# overviewPlot(transNetra)
+
+
+# overviewPlot(dataPrec)
+#ohneNull=dataPrec[dataPrec!=0]
+#overviewPlot(ohneNull)
+# boxcoxTrans(dataPrec)
+transPrec=slog(dataPrec) #Nullen enthalten
+# overviewPlot(transPrec)
+
+#scatter3D(transNO3,transNetra,transPrec)
+
+par(mfrow=c(3,1))
+plot(time(tsAll[,'zooNO3']),transNetra,xlab='Zeit',ylab='Netradiation',type="l")
+plot(time(tsAll[,'zooNO3']),transNO3,xlab='Zeit',ylab='NO3',col='blue',type="l")
+plot(time(tsAll[,'zooNO3']),transPrec,xlab='Zeit',ylab='Precip',type="l")
+par(mfrow=c(1,1))
+
+```
+
+  
+
+```{r pairplot_trans, echo=FALSE, fig.cap = figNum("Scatterplot jeweilige Datensatz, transformierte Daten aggregiert sich innerhalb 12 Stunden")}
+pairs(cbind(transNO3,transNetra,transPrec))
+
+```
+
+Leider wird auch keine starke Zusammenhang beobachtet. Rechne Kovarianzmatrix mit unterschied Verfahren und führe statistische Tests aus.
+
+```{r cor_orig_trans, echo=FALSE, error=FALSE, message=FALSE,warning=FALSE, fig.cap = figNum("Kovarianzanalysis, transformierte Daten")}
+PlotPixMatrix(cor(cbind(transNO3,transNetra,transPrec),method='pearson'), main = 'Korvarianzmatrix nach pearson')
+cor.test(transNO3,transNetra,method='pearson')
+cor.test(transNO3,transPrec,method='pearson')
+PlotPixMatrix(cor(cbind(transNO3,transNetra,transPrec),method='kendall'), main = 'Korvarianzmatrix nach kendall')
+cor.test(transNO3,transNetra,method='kendall')
+cor.test(transNO3,transPrec,method='kendall')
+PlotPixMatrix(cor(cbind(transNO3,transNetra,transPrec),method='spearman'), main = 'Korvarianzmatrix nach spearman')
+cor.test(transNO3,transNetra,method='spearman')
+cor.test(transNO3,transPrec,method='spearman')
+```
+
+Wir originale Daten wird hier nur sehr leichte Zusammenhang zwischen NO3 und Netradiation gefunden. Nach der statistische Tests ist Kovarianz ungleich Null, aber die zeigt nur sehr leicht Einfluss von Netradiation und Precip auf NO3, wobei der Einfluss von Netradiation größer als Precip ist.
+
+
+
+
+
+
+
+
+
+
+
+
