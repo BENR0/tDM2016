@@ -3,7 +3,7 @@
 
 # Beschreiben Sie den Wissensgewinn durch diese Modelle. Wie und wodurch wird NO3 beeinflusst?
 ## Originale Daten
-Wir bearbeiten zuerst die Datensatz „Chirimachay_NO3.lrn“ , „Chirimachay_Netradiation.lrn“ und „Chirimachay_Precip.lrn“, so dass die Messgröße innerhalb 12 Stunden sich aggregiert werden, dann schneiden wir die Zeitreihen, so dass nur die Daten in der Zeitpunkte, wo alle drei Daten vorhand sind, aufgenommen werden. Wir schaffen einen Überblick der Zusammenhang der Daten mit einem Plot.
+Wir bearbeiten zuerst die Datensätze „Chirimachay_NO3.lrn“ , „Chirimachay_Netradiation.lrn“ und „Chirimachay_Precip.lrn“, so dass die Messgrößen innerhalb 12 Stunden aggregiert werden. Weiterhin werden nur die Messungen der Zeitreihen betrachtet, die für alle drei Variablen vorhanden sind. Wir schaffen einen Überblick über den Zusammenhang der Daten mit einem Plot.
 
 ```{r 3plot_orig, echo=FALSE, fig.cap = figNum("Überblick alle 3 Zeitreihen, Daten nach Zeit geordnet, aggregiert sich innerhalb 12 Stunden")}
 dataNO3=coredata(tsAll[,'zooNO3'])
@@ -28,20 +28,20 @@ par(mfrow=c(1,1))
 
 Außerdem plotten wir jeweils zwei Daten gegeneinander.
 
-```{r pairplot_orig, echo=FALSE, fig.cap = figNum("Scatterplot jeweilige Datensatz, Daten aggregiert sich innerhalb 12 Stunden")}
+```{r pairplot_orig, echo=FALSE, fig.cap = figNum("Scatterplot der jeweiligen Datensätze, Daten aggregieren sich innerhalb 12 Stunden")}
 pairs(cbind(dataNO3,dataNetra,dataPrec))
 
 ```
 
-Hier sieht man aus erste Blick keine Lineare Zusammenhang zwischen jeweilige Daten. Daher rechnen wir die Kovarianzmatrizen mit unterschiedliche Verfahren.
+Hier sieht man auf den ersten Blick keinen linearen Zusammenhang zwischen den jeweiligen Daten. Daher rechnen wir die Kovarianzmatrizen mit folgenden Verfahren aus:
 
-  - Pearsonschen Korrelationskoeffizienten misst die Korrelation zwischen zwei normalverteilten Merkmalen, mit Werte nahe bei 0 zeigt die keine lineare Zusammenhang.
+  - Pearsonschen Korrelationskoeffizienten misst die Korrelation zwischen zwei normalverteilten Merkmalen. Werte nahe bei 0 zeigen keinen linearen Zusammenhang.
   
-  - Spearmanschen Rangkorrelationskoeffizienten ist ein nichtparametrischen statistischen Verfahren, beruhen auf der Vergabe von Rängen, kann daher auch eine nichtlineare Zusammenhang verweisen.
+  - Spearmanschen Rangkorrelationskoeffizienten ist ein nichtparametrisches, statistisches Verfahren. Es beruht auf der Vergabe von Rängen, kann daher auch auf einen nichtlinearen Zusammenhang verweisen.
   
   - Kendalls Tau berechnet die Differenz zwischen der Wahrscheinlichkeit, dass die beobachteten Daten für beide Variablen in derselben Rangfolge vorliegen und der Wahrscheinlichkeit, dass die Daten für die beiden Variablen verschiedene Rangfolgen besitzen.
 
-Wir führe gleichzeitig noch statistische Tests für jeweilige Verfahren aus.
+Wir führen gleichzeitig noch statistische Tests für die jeweiligen Verfahren aus.
 ```{r cor_orig, echo=FALSE, error=FALSE, message=FALSE,warning=FALSE,fig.cap = figNum("Korvarianzanalysis, Originale Daten")}
 #Packet: dbt.Plot
 PlotPixMatrix(cor(cbind(dataNO3,dataNetra,dataPrec),method='pearson'), main = 'Korvarianzmatrix nach pearson')
@@ -55,12 +55,12 @@ cor.test(dataNO3,dataNetra,method='spearman')
 cor.test(dataNO3,dataPrec,method='spearman')
 ```
 
-Hier sieht man keine deutliche lineare oder nichtlineare Zusammenhang zwischen jeweilige Variablen, trotzdem werden alle Nullhyphotese: true correlation/tau/rho ist gleich 0 mit höhe Signifikanz abgelehnt. D.h. Netradiation und Precip haben nur sehr kleinen Einfluss auf NO3. 
+Hier sieht man keinen deutlichen linearen oder nichtlinearen Zusammenhang zwischen den jeweilige Variablen. Trotzdem werden alle Nullhyphotesen "true correlation/tau/rho ist gleich 0" mit hoher Signifikanz abgelehnt. D.h. Netradiation und Precip haben nur sehr kleinen Einfluss auf NO3. 
 
 ***
 
 ## Transformierte Daten
-Daher betrachen wir noch die Transformierte Daten. Laut Box-cox-Transformation und Chain-Ladder-Verfahren werden die Daten wie folgende transformiert.
+Wir betrachen noch die transformierten Daten. Laut Box-cox-Transformation und der Ladder of Power werden die Daten folgendermaßen transformiert.
 
   - NO3: sqrt(Daten)
   
@@ -68,8 +68,8 @@ Daher betrachen wir noch die Transformierte Daten. Laut Box-cox-Transformation u
   
   - Precip: log(Daten +1), um Logrithmieren der Nullen zu vermeiden.
 
-Wir schaffen wie vorher einen Überblick der transformierte Zeitreihen, dann plotten wir jeweils zwei transformierte Daten gegeneinander.
-```{r 3dplot_trans, echo=FALSE, fig.cap = figNum("Überblick alle 3 Zeitreihen, transformierte Daten aggregiert sich innerhalb 12 Stunden")}
+Wir schaffen uns wie vorher einen Überblick der transformierten Zeitreihen. Dann plotten wir jeweils die Daten zwei der transformierten Variablen gegeneinander.
+```{r 3dplot_trans, echo=FALSE, fig.cap = figNum("Überblick der 3 Zeitreihen, transformierte Daten aggregieren sich innerhalb 12 Stunden")}
 # overviewPlot(dataNO3)
 # boxcoxTrans(dataNO3)
 transNO3 <- (sqrt(dataNO3))
@@ -100,12 +100,12 @@ par(mfrow=c(1,1))
 
   
 
-```{r pairplot_trans, echo=FALSE, fig.cap = figNum("Scatterplot jeweilige Datensatz, transformierte Daten aggregiert sich innerhalb 12 Stunden")}
+```{r pairplot_trans, echo=FALSE, fig.cap = figNum("Scatterplot der jeweiligen Datensätze, transformierte Daten aggregieren sich innerhalb 12 Stunden")}
 pairs(cbind(transNO3,transNetra,transPrec))
 
 ```
 
-Leider wird auch keine starke Zusammenhang beobachtet. Rechne Kovarianzmatrix mit unterschied Verfahren und führe statistische Tests aus.
+Auch hier wird kein starker Zusammenhang beobachtet. Wir berechnen die Kovarianzmatrizen mit den oben erwähnten Verfahren aus und führe statistische Tests durch.
 
 ```{r cor_orig_trans, echo=FALSE, error=FALSE, message=FALSE,warning=FALSE, fig.cap = figNum("Kovarianzanalysis, transformierte Daten")}
 PlotPixMatrix(cor(cbind(transNO3,transNetra,transPrec),method='pearson'), main = 'Korvarianzmatrix nach pearson')
@@ -119,7 +119,7 @@ cor.test(transNO3,transNetra,method='spearman')
 cor.test(transNO3,transPrec,method='spearman')
 ```
 
-Wir originale Daten wird hier nur sehr leichte Zusammenhang zwischen NO3 und Netradiation gefunden. Nach der statistische Tests ist Kovarianz ungleich Null, aber die zeigt nur sehr leicht Einfluss von Netradiation und Precip auf NO3, wobei der Einfluss von Netradiation größer als Precip ist.
+Wie in den nicht transformierten Daten wird hier nur ein minimaler Zusammenhang zwischen NO3 und Netradiation gefunden. Den statistischen Tests nach zu urteilen, ist die Kovarianz ungleich Null, jedoch zeigt diese nur sehr leichten Einfluss von Netradiation und Precip auf NO3, wobei der Einfluss von Netradiation größer als bei Precip ist.
 
 
 
