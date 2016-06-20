@@ -83,7 +83,7 @@ sowie ein nachfolgend ausgeführter Chi-Quadrat Test zeigen das die Daten nicht 
 Verteilung des Modells entsprechen. Insbesondere an den Enden der Modellverteilung
 sowie in der Mitte weichen die Daten deutlich ab.
 
-```{r QQ_GMM_Benj, echo = FALSE,fig.cap = figNum("GMM Verifizierung, QQplot gegen Normalverteilung")}
+```{r QQ_GMM_Benj, echo = FALSE, fig.cap = figNum("GMM Verifizierung, QQplot gegen Normalverteilung")}
 QQplotGMM(coredata(sixthroot), GMMRadMeans, GMMRadSDs, GMMRadWeights)
 
 #sixthrootKS <- KStestMixtures(coredata(sixthroot), GMMRadMeans, GMMRadSDs, GMMRadWeights)
@@ -95,30 +95,35 @@ QQplotGMM(coredata(sixthroot), GMMRadMeans, GMMRadSDs, GMMRadWeights)
 sixthrootChis <- Chi2testMixtures(coredata(sixthroot), GMMRadMeans, GMMRadSDs, GMMRadWeights,PlotIt = T)
 ```
 
-***
-```{r FFT_Benj, echo = FALSE, eval = eval_block}
+
+```{r FFT_Benj, echo = FALSE, eval = TRUE, fig.cap = figNum("GMM Verifizierung, QQplot gegen Normalverteilung")}
 specsixthroot <- spectrum(sixthroot, spans = c(3,9))
 
 #get sampling frequency of data
-freq <- frequency(sixthroot)
-Nyfreq <- freq/2
-Nf <- length(coredata(sixthroot))/2
-
-
-sixthrootFFT <- fft(coredata(sixthroot))/length(coredata(sixthroot))
-plot(Mod(sixthrootFFT[2:4000]), type = "l", xlab = "Frequenz (Hz)")
-
-sixthrootFFT2 <- ifft(coredata(sixthroot))/length(coredata(sixthroot)) #Pakete: pracma
-plot(Mod(sixthrootFFT2[2:300]), type = "l", xlab = "Frequenz (Hz)")
+# freq <- frequency(sixthroot)
+# Nyfreq <- freq/2
+# Nf <- length(coredata(sixthroot))/2
+# 
+# 
+# sixthrootFFT <- fft(coredata(sixthroot))/length(coredata(sixthroot))
+# plot(Mod(sixthrootFFT[2:4000]), type = "l", xlab = "Frequenz (Hz)")
+# 
+# sixthrootFFT2 <- ifft(coredata(sixthroot))/length(coredata(sixthroot)) #Pakete: pracma
+# plot(Mod(sixthrootFFT2[2:300]), type = "l", xlab = "Frequenz (Hz)")
 ```
 
+Im Spektrum des Strahlungs Datensatzes zeigt sich das neben der vermuteten
+dijurnalen Schwankung (Peak bei einer Frequenz von ca. 0.00002) weitere prägnante
+Frequenzpeaks auffallen. Diese könnten mit regionalen klimatischen Bedingungen,
+beispielsweise ausgeprägtem Tagesgang mit Niederschlägen zusammenhängen. Dies ist
+ohne weitere Hinweise durch entsprechende Experten nicht zu beurteilen.
 
 ### Analyse der multivariaten Zeitreihe
 
 Um einen visuellen Eindruck für mögliche nachfolgende Analysemethoden zu erhalten
 ist die 3 Dimensionale Zeitreihe zunächst mittels Umatrix verfahren projeziert worden.
 
-```{r umatrix, echo = FALSE, eval = TRUE}
+```{r umatrix, echo = FALSE, eval = TRUE, message = FALSE, include = FALSE}
 modelData <- as.data.frame(coredata(tsAll))
 
 esommatrix <- esom(as.matrix(modelData))
@@ -134,14 +139,17 @@ Zuständen im Datensatz modellieren.
 Daher ist unter der Annahme des einfachsten Modells zunächst einen Analyse
 mit 3 Zuständen gerechnet worden.
 
-```{r HMM_Multivariate, echo = FALSE, eval = TRUE}
+```{r HMM_Multivariate, echo = FALSE, eval = TRUE, message = FALSE, include = FALSE}
 HMM3 <- depmix(list(zooRad ~ 1, zooNO3 ~ 1, aggPrecip ~ 1), data = modelData, nstates = 3, family = list(gaussian(), gaussian(), gaussian()))
 
 set.seed(1)
 HMMfit3 <- fit(HMM3)
+
+```
+
+```{r HMM_Multivariate_summary, echo = FALSE, eval = TRUE, message = FALSE}
 print(HMMfit3)
 summary(HMMfit3)
-
 ```
 
 Beim Blick auf die Übergangsmatrix erkennt man das Zustand drei mit 
