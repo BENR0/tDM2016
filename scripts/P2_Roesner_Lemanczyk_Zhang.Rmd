@@ -167,30 +167,6 @@ overviewPlot <- function(data, name = "data"){
 #     Fi <- dnorm(Kernels,Mean1,Deviation1)*Weight1
 #     RMS1 <- sqrt(sum((Fi-ParetoDensity)^2))
 #     
-#     # Teste RMS fuer 2 Gauss
-#     Means2 <- c(0,0)
-#     Deviations2 <- c(0,0)
-#     Weights2 <- c(0,0)
-#     Valskmeans <- kmeans(Data,2,iter.max=100)
-#     KValues <- Valskmeans$cluster
-#     #print(KValues2)
-#     for (i in 1:2){
-#       Means2[i] <- mean(Data[KValues==i])
-#       Deviations2[i] <- sd(Data[KValues==i])
-#       Weights2[i] <- sum(KValues==i)
-#       if (is.na(Deviations2[i])) {Deviations2[i] <- 0}
-#     }
-#     Weights2 <- Weights2/length(KValues)
-#     Var=EMGauss(Data,Means2,Deviations2,Weights2,10,fast=fast)
-#     Means2 <- Var$Means
-#     Deviations2 <- Var$SDs
-#     Weights2 <- Var$Weights
-#     Fi <- 0
-#     for (i in 1:2){
-#       Fi <- Fi+dnorm(Kernels,Means2[i],Deviations2[i])*Weights2[i]
-#     }
-#     RMS2 <- sqrt(sum((Fi-ParetoDensity)^2))
-#     
 #     # Teste RMS fuer 3 Gauss
 #     Means3 <- c(0,0,0)
 #     Deviations3 <- c(0,0,0)
@@ -216,7 +192,7 @@ overviewPlot <- function(data, name = "data"){
 #     RMS3 <- sqrt(sum((Fi-ParetoDensity)^2))
 #     
 #     # ueberpruefe ob RMS1( 1 Gauss) oder RMS2 (3 Gauss ) kleiner ist. Speichere zugehoerige means, deviations und weights
-#     SSE <- c(RMS1^2*log(3), RMS2^2*log(3*2), RMS3^2*log(3*3))
+#     SSE <- c(RMS1^2*log(3), RMS3^2*log(3*3))
 #     #SSE <- c(RMS1^2*log(3), RMS2^2*log(3*2))
 #     minSSEind <- which.min(SSE)
 #     switch(as.character(minSSEind),
@@ -224,11 +200,7 @@ overviewPlot <- function(data, name = "data"){
 #                 deviations <- Deviation1
 #                 weights <- Weight1
 #                 rms <- RMS1},
-#            "2" = {means <- Means2
-#                 deviations <- Deviations2
-#                 weights <- Weights2
-#                 rms <- RMS2},
-#            "3" = {means <- Means3
+#            "2" = {means <- Means3
 #                 deviations <- Deviations3
 #                 weights <- Weights3
 #                 rms <- RMS3}
@@ -254,7 +226,7 @@ packages <- c('ABCanalysis','AdaptGauss','DataVisualisation','dbt.attributes','d
               'dbt.GraphAlgorithms','dbt.HESKES','dbt.IGCfiles','dbt.InteractiveTools',
               'dbt.MixtureModel','dbt.nanHandling','dbt.NeuronalNets','dbt.Plot',
               'dbt.Projections','dbt.RetroMAT','dbt.Statistics','reshape2','caTools',
-              'dbt.Transforms') #dbt Pakete
+              'dbt.Transforms', 'Umatrix') #dbt Pakete
 packages = c(packages,"kfigr", "knitr") #Pakete für knit
 packages = c(packages,'FinTS','tseries') #Pakete für GARCH
 packages = c(packages,'plot3D') #Pakete für 3dplot

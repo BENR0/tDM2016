@@ -1,12 +1,8 @@
-
-<!-- Ein-Variable-Analysis von Radiation -->
-
-
-
-```{r load_packages_Benja, echo=FALSE, error=FALSE, message=FALSE, include=FALSE,eval=eval_block}
+```{r load_packages_Benja, echo=FALSE, error=FALSE, message=FALSE, include=FALSE, eval=eval_block}
 #load packages
-packages <- c("tidyr", "dplyr", "DataIO", "lubridate", "zoo", "xts", "stringr", "timeSeries", "tseries", "car",
-              "AdaptGauss", "forecast", "kfigr", "dbt.RetroMAT", "RHmm", "FinTS", "knitr", "depmixS4")
+packages <- c("tidyr", "dplyr", "DataIO", "lubridate", "zoo", "xts", "stringr",
+              "timeSeries", "tseries", "car", "AdaptGauss", "forecast", "kfigr",
+              "dbt.RetroMAT", "RHmm", "FinTS", "knitr", "depmixS4")
 lapply(packages,library,character.only=TRUE)
 #set prefix for figure numbering
 opts_knit$set(kfigr.prefix = TRUE)
@@ -94,7 +90,7 @@ QQplotGMM(coredata(sixthroot), GMMRadMeans, GMMRadSDs, GMMRadWeights)
 #sixthrootChis <- Chi2testMixtures(coredata(sixthroot), GMMRadMeans, GMMRadSDs, GMMRadWeights)
 ```
 
-```{r Chi_test_GMM_Benj, echo = FALSE,fig.cap = figNum("GMM Verifizierung, Chi-Quadrat-Test")}
+```{r Chi_test_GMM_Benj, echo = FALSE, fig.cap = figNum("GMM Verifizierung, Chi-Quadrat-Test")}
 #sixthrootKS <- KStestMixtures(coredata(sixthroot), GMMRadMeans, GMMRadSDs, GMMRadWeights)
 sixthrootChis <- Chi2testMixtures(coredata(sixthroot), GMMRadMeans, GMMRadSDs, GMMRadWeights,PlotIt = T)
 ```
@@ -123,6 +119,8 @@ Um einen visuellen Eindruck für mögliche nachfolgende Analysemethoden zu erhal
 ist die 3 Dimensionale Zeitreihe zunächst mittels Umatrix verfahren projeziert worden.
 
 ```{r umatrix, echo = FALSE, eval = TRUE}
+modelData <- as.data.frame(coredata(tsAll))
+
 esommatrix <- esom(as.matrix(modelData))
 
 umatrix <- calcUmatrix(esommatrix$EsomNeurons)
@@ -136,9 +134,7 @@ Zuständen im Datensatz modellieren.
 Daher ist unter der Annahme des einfachsten Modells zunächst einen Analyse
 mit 3 Zuständen gerechnet worden.
 
-```{r HMM_Multivariate_Benj, echo = FALSE, eval = TRUE}
-modelData <- as.data.frame(coredata(tsAll))
-
+```{r HMM_Multivariate, echo = FALSE, eval = TRUE}
 HMM3 <- depmix(list(zooRad ~ 1, zooNO3 ~ 1, aggPrecip ~ 1), data = modelData, nstates = 3, family = list(gaussian(), gaussian(), gaussian()))
 
 set.seed(1)
@@ -146,18 +142,52 @@ HMMfit3 <- fit(HMM3)
 print(HMMfit3)
 summary(HMMfit3)
 
+```
+
+Beim Blick auf die Übergangsmatrix erkennt man das Zustand drei mit 
+auffällig hoher Wahrscheinlichkeit in sich selbst verbleibt und nur zu ca.
+5$%$ zu Zustand zwei wechselt. Auch wechsel in den Zustand drei sind in signifikanter
+Weise nur von Zustand 1 zu erwarten. Die Zustände eins und zwei verbleiben mit jeweils
+rund 77$%$ sowie 75$%$ im jeweiligen Zustand. Interessant ist hier das Zustand zwei nie
+in den Zustand drei wechselt während Zustand 1 mit rund 17$%$ in den Zustand zwei und
+7$%$ in den Zustand drei wechselt.
+Dies liefert möglicherweise einen Hinweis darauf das der Zustand drei obsolet ist, was
+sich jedoch nach einer Evaluation des Markov Modells mit nur zwei Zuständen unplausiebel
+erschien.
+
+```{r HMM3_over_data, echo = FALSE, eval = TRUE, fig.cap = figNum("Viterbi Zustände mit Datensatz") }
+#fit model over data with viterbi
 HMM3post <- posterior((HMMfit3))
-#merge to time series again for plottin
+#create time series of states
 HMM3post$datetime <- index(tsAll)
-tsHMM <- zoo(data.frame(states = HMM3post$state, datetime = HMM3post$datetime))
+tsHMM <- read.zoo(data.frame(datetime = HMM3post$datetime, states = HMM3post$state))
+tsHMM <- merge.zoo(tsHMM, tsAll)
 plot(tsHMM)
+```
 
-#HMM4 <- depmix(list(zooRad ~ 1, zooNO3 ~ 1, aggPrecip ~ 1), data = modelData, nstates = 4, family = list(gaussian(), gaussian(), gaussian()))
+Schaut man sich die Viterbi Zustände zusammen mit dem Datensatz an liegt die Vermutung
+nahe das Strahlung eine Auswirkung auf die NO3 Konzentration haben könnte,
+während Niederschlag einen, wenn überhaupt, nicht so offensichtlichen Einfluss hat.
 
-#set.seed(1)
-#HMMfit4 <- fit(HMM4)
-#print(HMMfit4)
-#summary(HMMfit4)
+
+Weitere Untersuchungen mit angepassten klassifikations Parametern im Hidden-Markov
+Modell könnten möglicherweise zu einer Verbesserung der Clusterung führen.
+
+
+```{r HMM3_hard_classification, echo = FALSE, eval = FALSE}
+set.seed(1)
+HMMfit3hard <- fit(HMM3, emcontrol=em.control(classification="hard"))
+print(HMMfit3hard)
+summary(HMMfit3hard)
+```
+
+```{r HMM3_over_data_hard, echo = FALSE, eval = FALSE}
+#fit model over data
+HMM3posthard <- posterior(HMMfit3hard)
+#create time series of states
+HMM3posthard$datetime <- index(tsAll)
+tsHMM3hard <- read.zoo(data.frame(datetime = HMM3posthard$datetime, states = HMM3posthard$state))
+plot(tsHMM3hard)
 ```
 
 
