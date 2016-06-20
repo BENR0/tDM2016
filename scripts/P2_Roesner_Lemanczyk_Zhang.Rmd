@@ -49,6 +49,12 @@ figNum = local({
   }
 })
 
+#load or install and load helper function
+installLoad <- function(p) {
+    if (!is.element(p, installed.packages()[, "Package"]))
+        install.packages(p, dep = TRUE)
+    library(p, character.only = TRUE)
+}
 
 #flag to easily change evaluation of code blocks in results section
 eval_block <- FALSE
@@ -236,14 +242,22 @@ overviewPlot <- function(data, name = "data"){
 
 ```{r load_packages, echo=FALSE, error=FALSE, message=FALSE, include=FALSE}
 #load packages
-packages <- c('ABCanalysis','AdaptGauss','DataVisualisation','GabrielGraph','GabrielGraph','Umatrix','dbt.attributes','dbt.BDM','dbt.CART','ClassAnalysis','dbt.classifiers','dbt.ColorScale','dbt.ColorScale','DataIO','dbt.DelaunayVoronoi','Dist','dbt.Distances','dbt.DNAarrays','dbt.general','dbt.GraphAlgorithms','dbt.HESKES','dbt.IGCfiles','dbt.InteractiveTools','dbt.MixtureModel','dbt.nanHandling','dbt.NeuronalNets','pareto','dbt.Plot','dbt.Projections','dbt.RetroMAT','dbt.Statistics','reshape2','caTools','dbt.Transforms') #dbt Pakete
+packages <- c('ABCanalysis','AdaptGauss','DataVisualisation','dbt.attributes','dbt.BDM',
+              'dbt.CART','ClassAnalysis','dbt.classifiers','dbt.ColorScale','dbt.ColorScale',
+              'DataIO','dbt.DelaunayVoronoi','dbt.Distances','dbt.DNAarrays','dbt.general',
+              'dbt.GraphAlgorithms','dbt.HESKES','dbt.IGCfiles','dbt.InteractiveTools',
+              'dbt.MixtureModel','dbt.nanHandling','dbt.NeuronalNets','dbt.Plot',
+              'dbt.Projections','dbt.RetroMAT','dbt.Statistics','reshape2','caTools',
+              'dbt.Transforms') #dbt Pakete
 packages = c(packages,"kfigr", "knitr") #Pakete für knit
 packages = c(packages,'FinTS','tseries') #Pakete für GARCH
 packages = c(packages,'plot3D') #Pakete für 3dplot
 
-packages <- c(packages, "tidyr", "dplyr", "lubridate", "zoo", "stringr", "timeSeries",  "car", "forecast", "dbt.RetroMAT", "RHmm",  "depmixS4",'pracma')  # from Benjamin
+packages <- c(packages, "tidyr", "dplyr", "lubridate", "zoo", "stringr", "timeSeries",
+              "car", "forecast", "dbt.RetroMAT", "RHmm", "depmixS4",'pracma')  # from Benjamin
 
-lapply(packages,library,character.only=TRUE)
+
+lapply(packages, installLoad)
 
 #set prefix for figure numbering
 opts_knit$set(kfigr.prefix = TRUE)

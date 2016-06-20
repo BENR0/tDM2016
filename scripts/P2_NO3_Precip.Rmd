@@ -4,12 +4,15 @@ subtitle: "Projekt 2, Wissen aus Hydrologie"
 author: "Benjamin Roesner, Marta Lemanczyk, Jiachun Zhang"
 output:
   html_document:
+    css: style.css
     fig_caption: yes
+    fig_retina: 1
     fig_height: 5
     fig_width: 7
     highlight: pygments
     number_sections: yes
     theme: united
+    keep_md: no
     toc: yes
     toc_depth: 3
   pdf_document:
@@ -18,7 +21,7 @@ output:
 ---
 
 
-```{r chunk options and functions_jiachun, echo=FALSE, eval = FALSE}
+```{r chunk options and functions_jiachun, echo=FALSE}
 #eval: evaluate code chunk true/false
 #include: include chunk in ouput document true/false (code still evaluated and plots generated)
 #echo: include source code true/
@@ -56,7 +59,7 @@ cache_erg <- FALSE
 ```
 
 
-```{r problem specific functions_jiachun, echo = FALSE, include = FALSE, eval=eval_block}
+```{r problem specific functions_jiachun, echo = FALSE, include = FALSE}
 # Funktion, um die erste bzw.letzte 10 Ertraege zu sehen
 printData <- function(data){
   print("Erste bzw. letzte 10 Werte des Datensatzes")
@@ -109,9 +112,14 @@ overviewPlot <- function(data, name = "data"){
 
 ```
 
-```{r load_packages_jiachun, echo=FALSE, error=FALSE, message=FALSE, include=FALSE,eval=eval_block}
+```{r load_packages_jiachun, echo=FALSE, error=FALSE, message=FALSE, include=FALSE}
 #load packages
-packages <- c('ABCanalysis','AdaptGauss','DataVisualisation','GabrielGraph','GabrielGraph','Umatrix','dbt.attributes','dbt.BDM','dbt.CART','ClassAnalysis','dbt.classifiers','dbt.ColorScale','dbt.ColorScale','DataIO','dbt.DelaunayVoronoi','Dist','dbt.Distances','dbt.DNAarrays','dbt.general','dbt.GraphAlgorithms','dbt.HESKES','dbt.IGCfiles','dbt.InteractiveTools','dbt.MixtureModel','dbt.nanHandling','dbt.NeuronalNets','pareto','dbt.Plot','dbt.Projections','dbt.RetroMAT','dbt.Statistics','reshape2','caTools','dbt.Transforms') #dbt Pakete
+packages <- c('ABCanalysis','AdaptGauss','DataVisualisation','dbt.attributes','dbt.BDM','dbt.CART'
+              ,'ClassAnalysis','dbt.classifiers','dbt.ColorScale','dbt.ColorScale','DataIO',
+              'dbt.DelaunayVoronoi','dbt.Distances','dbt.DNAarrays','dbt.general','dbt.GraphAlgorithms'
+              ,'dbt.HESKES','dbt.IGCfiles','dbt.InteractiveTools','dbt.MixtureModel','dbt.nanHandling'
+              ,'dbt.NeuronalNets','dbt.Plot','dbt.Projections','dbt.RetroMAT','dbt.Statistics'
+              ,'reshape2','caTools','dbt.Transforms', 'DataIO') #dbt Pakete
 packages = c(packages,"kfigr", "knitr") #Pakete für knit
 packages = c(packages,'FinTS','tseries') #Pakete für GARCH
 
@@ -148,7 +156,7 @@ Die Datensätze sind jeweils Liste mit 7 Variablen, so dass die Messungswerte un
 ## Chirimachay_NO3
 Zuerst untersuchen wir den Datensatz „Chirimachay_NO3.lrn“.
 Die erste Erträge sowie die letzten Erträge der Variable NO3 sehen wie folgt aus:
-```{r inspect vars, echo = FALSE}
+```{r inspect_vars, echo = FALSE}
 # Messungsfrequenz
 printData(Data)
 ```
@@ -185,7 +193,7 @@ Der Datensatz erhält keine NaNs, jedoch relativ viele Nullen. Deshalb vermuten 
 
 Wir betrachten den Datensatz jetzt noch einmal ohne die Nullen.
 
-```{r inspect var ohne null, echo = FALSE, fig.cap = figNum("Visuelle Inspektion NO3 ohne Nullen")}
+```{r inspect_var_ohne_null, echo = FALSE, fig.cap = figNum("Visuelle Inspektion NO3 ohne Nullen")}
 # Eliminierung der Nullen  
 ohneNull <- Data[, 1][Data[, 1] != 0]
 
@@ -197,15 +205,15 @@ Aufgrund des kleinen Wertebereiches multiplizieren wir die Daten mit dem Faktor 
 
 Nach mehrfacher Durchführung der Box-Cox Transformation erhielten wir Lambda = 0,5, weshalb wir die Wurzel von den Daten gezogen haben.
 
-```{r boxcoxTras, echo = FALSE,warning=FALSE, fig.cap = figNum("Eines der Ergebnisse bei Box-Cox Power Transformation")}
+```{r boxcoxTras, echo = FALSE, warning=FALSE, fig.cap = figNum("Eines der Ergebnisse bei Box-Cox Power Transformation")}
 # Transformieren Daten, um Normalverteilung zu annaehren
 #### aus welchem Paket ist boxcoxTrans??? dbt.Transforms
-boxcoxTrans(ohneNull[sample(1:length(ohneNull), 5000)])
+#boxcoxTrans(ohneNull[sample(1:length(ohneNull), 5000)])
 ```
 
 Die Wurzel-Transformation (Wurzel(Daten)*100):
 
-```{r inspect var trafo 2, echo = FALSE,fig.cap = figNum("Visuelle Inspektion transformierte NO3 ohne Nullen")}
+```{r inspect_var_trafo_2, echo = FALSE,fig.cap = figNum("Visuelle Inspektion transformierte NO3 ohne Nullen")}
 #transNO3 <- slog(ohneNull)*100
 #transNO3 <- slog(1/ohneNull)
 transNO3 <- (sqrt(ohneNull) * 100)
@@ -228,7 +236,7 @@ ab <- Bayes4Mixtures(transNO3, Werte1$Means, Werte1$SDs, Werte1$Weights, PlotIt 
 
 Wir passen die transformierte Daten mit 3 Gauss und verifizieren die Anpassung mit QQ-plot.
 
-```{r GMM plot, echo = FALSE,fig.cap = figNum("GMM für tranformierte NO3 ohne Nullen, 3 Gauss")}
+```{r GMM_plot, echo = FALSE,fig.cap = figNum("GMM für tranformierte NO3 ohne Nullen, 3 Gauss")}
 Werte1 <- list(Means = c(7.029219, 17.786148, 29.106267), 
            SDs = c(5.08932, 4.50063, 5.69700), 
            Weights = c( 0.176, 0.348, 0.490))
@@ -236,7 +244,7 @@ PlotMixturesAndBoundaries(transNO3, Werte1$Means, Werte1$SDs, Werte1$Weights,Sin
 ```
 
 
-```{r gmm verification plot, echo = FALSE, fig.cap = figNum("QQplot zur Verifizierung, Daten gegen GMM")}
+```{r gmm_verification_plot, echo = FALSE, fig.cap = figNum("QQplot zur Verifizierung, Daten gegen GMM")}
 #Verifizierung
 Werte1 <- list(Means = c(7.029219, 17.786148, 29.106267), 
            SDs = c(5.08932, 4.50063, 5.69700), 
@@ -247,7 +255,7 @@ QQplotGMM(transNO3, Werte1$Means, Werte1$SDs, Werte1$Weights)
 
 Die Anpassung sieht im QQ-Plot bis auf die Werte am Rand gut aus. Zur statistischen Verifizierung verwenden wir noch den Chi-Quadrat-Test.
 
-```{r gmm verification statistik test, echo = FALSE,fig.cap = figNum("Chi-Quadrat-Test. Nullhypothese: Daten und GMM besitzen die gleiche Verteilung")}
+```{r gmm_verification_statistik_test, echo = FALSE,fig.cap = figNum("Chi-Quadrat-Test. Nullhypothese: Daten und GMM besitzen die gleiche Verteilung")}
 
 abc <- Chi2testMixtures(transNO3, Werte1$Means, Werte1$SDs, Werte1$Weights, PlotIt = T)
 ```
@@ -287,7 +295,7 @@ Differenz <- diff(data)
 
 Hier wird der ARCH LM-Test verwendet und überprüft, ob es ARCH Effekte gibt.
 
-```{r Arch/ Garch, echo = FALSE, include = TRUE}
+```{r Arch_Garch, echo = FALSE, include = TRUE}
 #Beste AR Modell Schatzen, Berechne die Regression der Yt-1 auf die Yt (KQ) um die Fehler e_t zu erhalten
 #Berechne die KQ Regression von Fehler
 #Teste die gegenseitige Signifikanz der Parameter
@@ -303,7 +311,7 @@ Wegen des kleines P-Wert wird die Nullhypothese abgelehnt, d.h. es gibt einen AR
 
 Die Parameter werden hier durch Ausprobieren bestimmt. Anschließend wird mit Hilfe des AIC-Kriteriums der beste Parameter bestimmt.
 
-```{r Arch/ Garch 2, echo = FALSE, message = FALSE, include = FALSE}
+```{r Arch_Garch_2, echo = FALSE, message = FALSE, include = FALSE}
 gar1 <- garch(Differenz,order = c(1,0))
 gar2 <- garch(Differenz,order = c(2,0))
 gar3 <- garch(Differenz,order = c(3,0))
@@ -321,7 +329,7 @@ aic <- c(aic,AIC(gar6))
 aic <- c(aic,AIC(gar7))
 ```
 
-```{r Arch/ Garch plot, echo = FALSE, fig.cap = figNum("Güte des GARCH Modelles mit unterschiedlichen Parametern")}
+```{r Arch_Garch_plot, echo = FALSE, fig.cap = figNum("Güte des GARCH Modelles mit unterschiedlichen Parametern")}
 plot(aic, type = "l")
 points(aic)
 legend("topright", paste(1:7, ": GARCH(",c("1,0","2,0","3,0","1,1","1,2","2,1","2,2"),")"), pch = 1)
@@ -329,7 +337,7 @@ legend("topright", paste(1:7, ": GARCH(",c("1,0","2,0","3,0","1,1","1,2","2,1","
 
 Wir sehen, dass der Wert beim AIC für einen GARCH(1,1) am geringsten ist, weshalb dieser ausgewählt wird.
 
-```{r Arch/ Garch 3, echo = FALSE,fig.cap = figNum("Residuenanalysis für GARCH(1,1)")}
+```{r Arch_Garch_3, echo = FALSE,fig.cap = figNum("Residuenanalysis für GARCH(1,1)")}
 summary(gar4)
 
 #Jarque Bera Test: test, ob Residuals normalverteilt ist.
@@ -354,7 +362,7 @@ Laut Skript sollen Residuen nicht autokorreliert sein, weshalb wie die GARCH(1,1
 ## Chirimachay_Precip
 Jetzt untersuchen wir den Datensatz „Chirimachay_Precip.lrn“.
 Die ersten sowie letzten Einträge der Variable Precip sehen wie folgt aus:
-```{r inspect vars_Precip, echo = FALSE}
+```{r inspect_vars_Precip, echo = FALSE}
 attach(Prec)
 
 # Messungsfrequenz
@@ -393,7 +401,7 @@ Auch dieser Datensatz entält keine NaNs, jedoch viele Nullen und Werte von 0,1.
 
 Wir haben die Nullen und die 0,1 Werte als seperate Gruppen aus dem Datensatz genommen und betrachten nun die restlichen Daten. Beachte hier, dass der Stichprobumfang der restlichen Daten sehr klein ist, die Verteilung von nur 366 Daten wird untersucht.
 
-```{r inspect var ohne null_Precip, echo = FALSE, fig.cap = figNum("Visuelle Inspektion Precipitation ohne 0,0 und 0,1. Transformierte Precipitation")}
+```{r inspect_var_ohne_null_Precip, echo = FALSE, fig.cap = figNum("Visuelle Inspektion Precipitation ohne 0,0 und 0,1. Transformierte Precipitation")}
 # Eliminierung der Nullen und extrem kleinen Werten 
 ohneNull <- Data[, 1][Data[, 1] != 0]
 ohneNullklein <- ohneNull[ohneNull!= 0.1]
@@ -405,15 +413,15 @@ Die restlichen Daten sind weiterhin nicht normalverteilt, weshalb wir die Daten 
 
 Nach mehrfacher Durchführung der Box-Cox-Transformation erhielten wir ein Lambda = -3,5. Nach Tukeys Ladder of Power entscheiden wir uns daher die Daten mit -3 zu potenzieren.
 
-```{r boxcoxTras_Precip, echo = FALSE,warning=FALSE, fig.cap = figNum("Eine der Ergebnissse bei Box-Cox Power Transformation")}
+```{r boxcoxTrans_Precip, echo = FALSE,warning=FALSE, fig.cap = figNum("Eine der Ergebnissse bei Box-Cox Power Transformation")}
 # Transformieren Daten, um Normalverteilung zu annaehren
 #### aus welchem Paket ist boxcoxTrans??? dbt.Transforms
-boxcoxTrans(ohneNullklein)
+#boxcoxTrans(ohneNullklein)
 ```
 
 Transformatierte Daten (Daten^(-3)):
 
-```{r inspect var trafo 2_Precip, echo = FALSE,fig.cap = figNum("Visuelle Inspektion transformierter Precipitation Daten ohne 0,0 und 0,1.")}
+```{r inspect_var_trafo_2_Precip, echo = FALSE,fig.cap = figNum("Visuelle Inspektion transformierter Precipitation Daten ohne 0,0 und 0,1.")}
 
 transPrec <- ohneNullklein^(-3)
 overviewPlot(transPrec, paste("Transformierte", Header[1]))
@@ -437,14 +445,14 @@ ab <- Bayes4Mixtures(transPrec, Werte2$Means, Werte2$SDs, Werte2$Weights, PlotIt
 
 Wir passen die transformierte Daten mit 3 Gauss.
 
-```{r GMM plot_Precip, echo = FALSE,fig.cap = figNum("GMM für tranformierte Precipitation Daten ohne 0,0 und 0,1, 3 Gauss")}
+```{r GMM_plot_Precip, echo = FALSE,fig.cap = figNum("GMM für tranformierte Precipitation Daten ohne 0,0 und 0,1, 3 Gauss")}
 Werte2 <- list(Means = c(126.0190, 429.6519, 712.7960), 
            SDs = c(121.8712, 122.5664, 135.4684), 
            Weights = c( 0.343, 0.224, 0.553))
 PlotMixturesAndBoundaries(transPrec, Werte2$Means, Werte2$SDs, Werte2$Weights,SingleGausses=T, lwd=3)
 ```
 
-```{r gmm verification plot_Precip, echo = FALSE, fig.cap = figNum("QQplot zur Verifizierung, Daten gegen GMM")}
+```{r gmm_verification_plot_Precip, echo = FALSE, fig.cap = figNum("QQplot zur Verifizierung, Daten gegen GMM")}
 #Verifizierung
 Werte2 <- list(Means = c(126.0190, 429.6519, 712.7960), 
            SDs = c(121.8712, 122.5664, 135.4684), 
@@ -455,7 +463,7 @@ QQplotGMM(transPrec, Werte2$Means, Werte2$SDs, Werte2$Weights)
 
 Die Anpassung siegt auf den ersten Blick gut aus. Wir führen noch eine statistische Verifizierung durch.
 
-```{r gmm verification statistik test_Precip, echo = FALSE,fig.cap = figNum("Chi-Quadrat-Test. H0: Daten und GMM besitzen die gleiche Verteilung")}
+```{r gmm_verification_statistik_test_Precip, echo = FALSE,fig.cap = figNum("Chi-Quadrat-Test. H0: Daten und GMM besitzen die gleiche Verteilung")}
 
 abc <- Chi2testMixtures(transPrec, Werte2$Means, Werte2$SDs, Werte2$Weights, PlotIt = T)
 ```

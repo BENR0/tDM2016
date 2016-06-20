@@ -3,7 +3,11 @@
 
 # Beschreiben Sie den Wissensgewinn durch diese Modelle. Wie und wodurch wird NO3 beeinflusst?
 ## Originale Daten
-Wir bearbeiten zuerst die Datensätze „Chirimachay_NO3.lrn“ , „Chirimachay_Netradiation.lrn“ und „Chirimachay_Precip.lrn“, so dass die Messgrößen innerhalb 12 Stunden aggregiert werden. Weiterhin werden nur die Messungen der Zeitreihen betrachtet, die für alle drei Variablen vorhanden sind. Wir schaffen einen Überblick über den Zusammenhang der Daten mit einem Plot.
+Wir bearbeiten zuerst die Datensätze „Chirimachay_NO3.lrn“ , „Chirimachay_Netradiation.lrn“
+und „Chirimachay_Precip.lrn“, so dass die Messgrößen innerhalb 12 Stunden
+aggregiert werden. Weiterhin werden nur die Messungen der Zeitreihen betrachtet,
+die für alle drei Variablen vorhanden sind. Wir schaffen einen Überblick über den
+Zusammenhang der Daten mit einem Plot.
 
 ```{r 3plot_orig, echo=FALSE, fig.cap = figNum("Überblick alle 3 Zeitreihen, Daten nach Zeit geordnet, aggregiert sich innerhalb 12 Stunden")}
 dataNO3=coredata(tsAll[,'zooNO3'])
