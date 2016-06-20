@@ -117,7 +117,47 @@ plot(Mod(sixthrootFFT2[2:300]), type = "l", xlab = "Frequenz (Hz)")
 ```
 
 
-```{r HMM Multivariate_Benj, echo = FALSE, eval = eval_block}
-modelData <- as.data.frame(coredata(tsAll))
+### Analyse der multivariaten Zeitreihe
+
+Um einen visuellen Eindruck für mögliche nachfolgende Analysemethoden zu erhalten
+ist die 3 Dimensionale Zeitreihe zunächst mittels Umatrix verfahren projeziert worden.
+
+```{r umatrix, echo = FALSE, eval = TRUE}
+esommatrix <- esom(as.matrix(modelData))
+
+umatrix <- calcUmatrix(esommatrix$EsomNeurons)
+plotUmatrix(umatrix)
 ```
+
+es zeigt sich das keine sehr ausgeprägten Cluster im Datensatz vorhanden sind.
+Möglicherweise lässt sich jedoch mittels eines Hidden-Markow Model Ansatzes und
+den Informationen aus der Umatrix Projektion ein Zusammenhang mit drei oder vier
+Zuständen im Datensatz modellieren.
+Daher ist unter der Annahme des einfachsten Modells zunächst einen Analyse
+mit 3 Zuständen gerechnet worden.
+
+```{r HMM_Multivariate_Benj, echo = FALSE, eval = TRUE}
+modelData <- as.data.frame(coredata(tsAll))
+
+HMM3 <- depmix(list(zooRad ~ 1, zooNO3 ~ 1, aggPrecip ~ 1), data = modelData, nstates = 3, family = list(gaussian(), gaussian(), gaussian()))
+
+set.seed(1)
+HMMfit3 <- fit(HMM3)
+print(HMMfit3)
+summary(HMMfit3)
+
+HMM3post <- posterior((HMMfit3))
+#merge to time series again for plottin
+HMM3post$datetime <- index(tsAll)
+tsHMM <- zoo(data.frame(states = HMM3post$state, datetime = HMM3post$datetime))
+plot(tsHMM)
+
+#HMM4 <- depmix(list(zooRad ~ 1, zooNO3 ~ 1, aggPrecip ~ 1), data = modelData, nstates = 4, family = list(gaussian(), gaussian(), gaussian()))
+
+#set.seed(1)
+#HMMfit4 <- fit(HMM4)
+#print(HMMfit4)
+#summary(HMMfit4)
+```
+
 

@@ -112,10 +112,10 @@ overviewPlot <- function(data, name = "data"){
 
 ```
 
-```{r load_packages_jiachun, echo=FALSE, error=FALSE, message=FALSE, include=FALSE}
+```{r load_packages_jiachun, echo=FALSE, error=FALSE, message=FALSE, include=FALSE, eval = FALSE}
 #load packages
 packages <- c('ABCanalysis','AdaptGauss','DataVisualisation','dbt.attributes','dbt.BDM','dbt.CART'
-              ,'ClassAnalysis','dbt.classifiers','dbt.ColorScale','dbt.ColorScale','DataIO',
+              ,'dbt.ClassAnalysis','dbt.classifiers','dbt.ColorScale','dbt.ColorScale','DataIO',
               'dbt.DelaunayVoronoi','dbt.Distances','dbt.DNAarrays','dbt.general','dbt.GraphAlgorithms'
               ,'dbt.HESKES','dbt.IGCfiles','dbt.InteractiveTools','dbt.MixtureModel','dbt.nanHandling'
               ,'dbt.NeuronalNets','dbt.Plot','dbt.Projections','dbt.RetroMAT','dbt.Statistics'

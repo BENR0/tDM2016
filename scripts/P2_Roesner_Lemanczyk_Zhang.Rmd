@@ -20,7 +20,7 @@ output:
     toc: yes
 ---
 
-```{r chunk options and functions, echo=FALSE, eval = TRUE}
+```{r chunk_options_and_functions, echo=FALSE, eval = TRUE}
 #eval: evaluate code chunk true/false
 #include: include chunk in ouput document true/false (code still evaluated and plots generated)
 #echo: include source code true/
@@ -45,15 +45,19 @@ figNum = local({
   i = 0
   function(x) {
     i <<-  i + 1
-    paste("Figure ", i, ": ", x, sep = "")
+    paste("Abb. ", i, ": ", x, sep = "")
   }
 })
 
 #load or install and load helper function
-installLoad <- function(p) {
-    if (!is.element(p, installed.packages()[, "Package"]))
-        install.packages(p, dep = TRUE)
+installLoad <- function(p){
+    if(!is.element(p, installed.packages()[, "Package"])){
+      rstudiorepo <- getOption("repos")[1]
+      purl <- c(rstudiorepo, "http://cran.at.r-project.org")
+      install.packages(p, dep = TRUE, repos ="http://cran.at.r-project.org")
+    } else {
     library(p, character.only = TRUE)
+    }
 }
 
 #flag to easily change evaluation of code blocks in results section
@@ -62,10 +66,12 @@ eval_block <- FALSE
 cache_erg <- FALSE
 ```
 
-```{r problem specific functions, echo = FALSE, include = FALSE}
+```{r problem_specific_functions, echo = FALSE, include = FALSE}
 loadData <- function(flist, names = unlist(lapply(seq(1, length(flist)), function(x) paste0("d", x)))){
   for (f in files){
-    assign(names[which(flist == f)], as.data.frame(ReadLRN(basename(f), dirname(f))$Data), envir = .GlobalEnv)
+    readin <- ReadLRN(basename(f), dirname(f))
+    colnames(readin$Data) <- readin$Header 
+    assign(names[which(flist == f)], as.data.frame(readin$Data), envir = .GlobalEnv)
     }
 }
 
@@ -243,7 +249,7 @@ overviewPlot <- function(data, name = "data"){
 ```{r load_packages, echo=FALSE, error=FALSE, message=FALSE, include=FALSE}
 #load packages
 packages <- c('ABCanalysis','AdaptGauss','DataVisualisation','dbt.attributes','dbt.BDM',
-              'dbt.CART','ClassAnalysis','dbt.classifiers','dbt.ColorScale','dbt.ColorScale',
+              'dbt.CART','dbt.ClassAnalysis','dbt.classifiers','dbt.ColorScale','dbt.ColorScale',
               'DataIO','dbt.DelaunayVoronoi','dbt.Distances','dbt.DNAarrays','dbt.general',
               'dbt.GraphAlgorithms','dbt.HESKES','dbt.IGCfiles','dbt.InteractiveTools',
               'dbt.MixtureModel','dbt.nanHandling','dbt.NeuronalNets','dbt.Plot',
@@ -336,7 +342,7 @@ tsAll <- na.trim(tsAll)
 
 ```
 
-```{r Jiachun NO3 Precip data, child = "P2_NO3_Precip.Rmd"}              
+```{r Jiachun_NO3_Precip_data, child = "P2_NO3_Precip.Rmd"}              
 ```
 <!-- , eval=eval_block -->
 ```{r Benjamin_Radiation_data, child = "P2_Rediation.Rmd"}
